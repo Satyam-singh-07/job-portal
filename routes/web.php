@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\web\AuthController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,8 +39,12 @@ Route::get('/employer/dashboard', function () {
     return view('employers.dashboard');
 })->name('employer.dashboard');
 
-Route::get('/company-detail', function () {
-    return view('employers.show');
+Route::get('/company/@{username}', function ($username) {
+
+User::findByUsername($username) ?? abort(404, 'Company not found');
+
+
+    return view('employers.show', compact('username'));
 })->name('company.show');
 
 Route::get('/employer/post-job', function () {
@@ -126,7 +131,9 @@ Route::middleware('guest')->group(function () {
         return view('auth.login');
     })->name('login');
 
-
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:5,1');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
+  
     //auth routes
     Route::post('/register', [AuthController::class, 'store'])
         ->middleware('throttle:10,1');
@@ -138,10 +145,7 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
 
-    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:5,1');
-    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
     Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
-
 
 
     Route::middleware('role:candidate')->prefix('candidate')->name('candidate.')->group(function () {
@@ -152,12 +156,6 @@ Route::middleware('auth')->group(function () {
     });
 
 
-
-
-
-
-
-
     Route::middleware('role:employer')->prefix('employer')->name('employer.')->group(function () {
         Route::get('/dashboard', function () {
             return view('employers.dashboard');
@@ -166,5 +164,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/company-profile', function () {
             return view('employers.company-profile');
         })->name('company-profile');
+
+
+
+        Route::get('/post-job', function () {
+            return view('employer.post-job');
+        })->name('post-job');
     });
 });

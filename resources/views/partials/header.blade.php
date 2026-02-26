@@ -68,12 +68,12 @@
                                 </a>
                             </li>
 
-                            <li>
+                            {{-- <li>
                                 <a class="dropdown-item {{ request()->routeIs('company.show') ? 'active' : '' }}"
                                     href="{{ route('company.show') }}">
                                     Company Detail
                                 </a>
-                            </li>
+                            </li> --}}
 
                             <li>
                                 <a class="dropdown-item {{ request()->routeIs('employer.dashboard') ? 'active' : '' }}"

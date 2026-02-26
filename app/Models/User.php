@@ -30,6 +30,7 @@ class User extends Authenticatable
     'otp_code',
     'otp_expires_at',
     'email_verified',
+    'username',
 ];
 
 public function role()
@@ -56,4 +57,10 @@ public function role()
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+
+    public static function findByUsername($username)
+    {
+        return self::where('username', $username)->first();
+    }
 }

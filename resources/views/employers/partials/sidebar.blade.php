@@ -8,11 +8,11 @@
                         <li class="@if (request()->routeIs('employer.dashboard')) active @endif">
                             <a href="{{ route('employer.dashboard') }}"><i class="fa-solid fa-gauge"></i> Dashboard</a>
                         </li>
-                        <li>
-                            <a href="#"><i class="fa-solid fa-user-pen"></i> Edit Account Details</a>
+                        <li  class="@if (request()->routeIs('employer.company-profile')) active @endif">
+                            <a href="{{ route('employer.company-profile') }}"><i class="fa-solid fa-user-pen"></i> Edit Company Details</a>
                         </li>
                         <li>
-                            <a href="#"><i class="fa-solid fa-building"></i> Company Public
+                            <a href="{{ route('company.show', ['username' => auth()->user()->username]) }}"><i class="fa-solid fa-building"></i> Company Public
                                 Profile</a>
                         </li>
                         <li class="@if (request()->routeIs('employer.post-job')) active @endif">
@@ -21,7 +21,7 @@
                         <li>
                             <a href="#"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
                         </li>
-                        <li>
+                        {{-- <li>
                             <a href="#"><i class="fa-solid fa-layer-group"></i> CV Search Packages</a>
                         </li>
                         <li>
@@ -32,7 +32,7 @@
                         </li>
                         <li>
                             <a href="#"><i class="fa-solid fa-users"></i> Company Followers</a>
-                        </li>
+                        </li> --}}
                         <li>
                             <a href="{{ route('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
                         </li>

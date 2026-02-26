@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -37,6 +38,9 @@ class AuthController extends Controller
             // Employer Domain Check
             if ($request->role === 'employer') {
 
+
+            $username = Str::slug($request->company_name);
+
                 $websiteDomain = parse_url($request->website, PHP_URL_HOST);
                 $emailDomain = substr(strrchr($request->email, "@"), 1);
 
@@ -47,6 +51,8 @@ class AuthController extends Controller
                         ]
                     ], 422);
                 }
+            }else {
+                $username = Str::slug($request->first_name . '-' . $request->last_name);
             }
 
             $role = Role::where('name', $request->role)->first();
@@ -103,6 +109,7 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password),
                 'otp_code' => Hash::make($otp),
                 'otp_expires_at' => now()->addMinutes(10),
+                'username' => $username,
                 'email_verified' => false
             ]);
 
