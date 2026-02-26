@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\web\AuthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,14 +47,7 @@ Route::get('/employer/post-job', function () {
 })->name('employer.post-job');
 
 
-Route::get('/register', function () {
-    return view('auth.register');
-})->name('register');
 
-
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
 
 
 
@@ -70,11 +64,6 @@ Route::prefix('candidate')->name('candidate.')->group(function () {
     Route::get('/detail', function () {
         return view('candidates.show');
     })->name('show');
-
-    Route::get('/dashboard', function () {
-        return view('candidates.dashboard');
-    })->name('dashboard');
-
     Route::get('/edit-profile', function () {
         return view('candidates.edit-profile');
     })->name('edit-profile');
@@ -122,4 +111,60 @@ Route::prefix('candidate')->name('candidate.')->group(function () {
     Route::get('/payment-history', function () {
         return view('candidates.payment-history');
     })->name('payment-history');
+});
+
+
+
+Route::middleware('guest')->group(function () {
+
+    Route::get('/register', function () {
+        return view('auth.register');
+    })->name('register');
+
+
+    Route::get('/login', function () {
+        return view('auth.login');
+    })->name('login');
+
+
+    //auth routes
+    Route::post('/register', [AuthController::class, 'store'])
+        ->middleware('throttle:10,1');
+
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:10,1')->name('login.post');
+});
+
+
+Route::middleware('auth')->group(function () {
+
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:5,1');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
+    Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+
+
+
+    Route::middleware('role:candidate')->prefix('candidate')->name('candidate.')->group(function () {
+
+        Route::get('/dashboard', function () {
+            return view('candidates.dashboard');
+        })->name('dashboard');
+    });
+
+
+
+
+
+
+
+
+    Route::middleware('role:employer')->prefix('employer')->name('employer.')->group(function () {
+        Route::get('/dashboard', function () {
+            return view('employers.dashboard');
+        })->name('dashboard');
+
+        Route::get('/company-profile', function () {
+            return view('employers.company-profile');
+        })->name('company-profile');
+    });
 });

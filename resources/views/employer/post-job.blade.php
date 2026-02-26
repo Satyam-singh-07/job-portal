@@ -8,60 +8,23 @@
         <div class="container">
             <div class="employer-hero-content">
                 <div>
-                    <span class="company-pill">Northwind Commerce</span>
+                    <span class="company-pill">{{ auth()->user()->company_name }}</span>
                     <h1>Create a new opportunity</h1>
                     <p>
                         Share role details, requirements, and perks so the right
                         candidates can find you faster.
                     </p>
                 </div>
-                <a href="company-dashboard.html" class="btn btn-outline-primary">Back to Dashboard</a>
+                <a href="{{ route('employer.dashboard') }}" class="btn btn-outline-primary">Back to Dashboard</a>
             </div>
         </div>
     </div>
     <section class="dashboard-section employer-dashboard post-job-dashboard">
         <div class="container mt-4">
             <div class="dashboard-layout">
-                <aside class="dashboard-sidebar employer-sidebar">
-                    <div class="sidebar-header">
-                        <h2>Northwind Commerce</h2>
-                        <p>jobs@northwind.com</p>
-                        <span class="company-pill">Premium Employer</span>
-                    </div>
-                    <ul class="dashboard-nav">
-                        <li>
-                            <a href="company-dashboard.html"><i class="fa-solid fa-gauge"></i> Dashboard</a>
-                        </li>
-                        <li>
-                            <a href="edit-profile.html"><i class="fa-solid fa-user-pen"></i> Edit Account Details</a>
-                        </li>
-                        <li>
-                            <a href="company-detail.html"><i class="fa-solid fa-building"></i> Company Public
-                                Profile</a>
-                        </li>
-                        <li class="active">
-                            <a href="post-job.html"><i class="fa-solid fa-plus"></i> Post a Job</a>
-                        </li>
-                        <li>
-                            <a href="job-listing.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
-                        </li>
-                        <li>
-                            <a href="packages.html"><i class="fa-solid fa-layer-group"></i> Packages</a>
-                        </li>
-                        <li>
-                            <a href="payment-history.html"><i class="fa-solid fa-credit-card"></i> Payment History</a>
-                        </li>
-                        <li>
-                            <a href="my-messages.html"><i class="fa-solid fa-envelope"></i> Company Messages</a>
-                        </li>
-                        <li>
-                            <a href="my-followings.html"><i class="fa-solid fa-users"></i> Company Followers</a>
-                        </li>
-                        <li>
-                            <a href="#."><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-                        </li>
-                    </ul>
-                </aside>
+                
+                @include('employers.partials.sidebar')
+
                 <div class="dashboard-main">
                     <section class="post-job-panel">
                         <div class="panel-heading">

@@ -8,6 +8,8 @@
 
     <title>@yield('title', 'Job Portal')</title>
 
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- Favicon -->
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
 
@@ -38,8 +40,15 @@
     <script src="{{ asset('js/owl.carousel.js') }}"></script>
     <script src="{{ asset('js/script.js') }}"></script>
 
-    @stack('scripts')
-
+    @yield('scripts')
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
+    <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
 </body>
 
 </html>

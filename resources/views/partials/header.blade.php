@@ -246,18 +246,17 @@
 
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="{{ route('employer.dashboard') }}">
+                                    <a class="dropdown-item" href="{{ auth()->user()->role === 'candidate' ? route('candidate.dashboard') : route('employer.dashboard') }}">
                                         Dashboard
                                     </a>
                                 </li>
 
                                 <li>
-                                    <form method="POST" action="#">
-                                        @csrf
-                                        <button type="submit" class="dropdown-item">
+                                    
+                                        
+                                        <a href="{{ route('logout') }}" class="dropdown-item">
                                             Logout
-                                        </button>
-                                    </form>
+                                        </a>
                                 </li>
                             </ul>
                         </div>

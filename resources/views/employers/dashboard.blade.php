@@ -11,7 +11,7 @@
                     <h1>Welcome to Employer Dashboard</h1>
                     <p>Track job postings, packages, and CV views in one place.</p>
                 </div>
-                <a href="post-job.html" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Post a Job</a>
+                <a href="{{ route('employer.post-job') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Post a Job</a>
             </div>
         </div>
     </div>
@@ -19,46 +19,8 @@
     <section class="dashboard-section employer-dashboard">
         <div class="container mt-4">
             <div class="dashboard-layout">
-                <aside class="dashboard-sidebar employer-sidebar">
-                    <div class="sidebar-header">
-                        <h2>Northwind Commerce</h2>
-                        <p>jobs@northwind.com</p>
-                        <span class="company-pill">Premium Employer</span>
-                    </div>
-                    <ul class="dashboard-nav">
-                        <li class="active">
-                            <a href="company-dashboard.html"><i class="fa-solid fa-gauge"></i> Dashboard</a>
-                        </li>
-                        <li>
-                            <a href="edit-profile.html"><i class="fa-solid fa-user-pen"></i> Edit Account Details</a>
-                        </li>
-                        <li>
-                            <a href="company-detail.html"><i class="fa-solid fa-building"></i> Company Public
-                                Profile</a>
-                        </li>
-                        <li>
-                            <a href="post-job.html"><i class="fa-solid fa-plus"></i> Post a Job</a>
-                        </li>
-                        <li>
-                            <a href="job-listing.html"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
-                        </li>
-                        <li>
-                            <a href="packages.html"><i class="fa-solid fa-layer-group"></i> CV Search Packages</a>
-                        </li>
-                        <li>
-                            <a href="payment-history.html"><i class="fa-solid fa-credit-card"></i> Payment History</a>
-                        </li>
-                        <li>
-                            <a href="my-messages.html"><i class="fa-solid fa-envelope"></i> Company Messages</a>
-                        </li>
-                        <li>
-                            <a href="my-followings.html"><i class="fa-solid fa-users"></i> Company Followers</a>
-                        </li>
-                        <li>
-                            <a href="#."><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
-                        </li>
-                    </ul>
-                </aside>
+               
+                @include('employers.partials.sidebar')
                 <div class="dashboard-main">
                     <div class="row g-3 dashboard-stats">
                         <div class="col-sm-4">
