@@ -92,6 +92,130 @@
                         </ul>
                     </li>
 
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {{ request()->routeIs('candidate.*') ? 'active' : '' }}"
+                            href="#" id="candidateDropdown" role="button" data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            Candidate
+                        </a>
+
+                        <ul class="dropdown-menu dropdown-menu-lg" aria-labelledby="candidateDropdown">
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.index') ? 'active' : '' }}"
+                                    href="{{ route('candidate.index') }}">
+                                    Candidate List
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.grid') ? 'active' : '' }}"
+                                    href="#">
+                                    Candidate Grid View
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.show') ? 'active' : '' }}"
+                                    href="{{ route('candidate.show') }}">
+                                    Candidate Single
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.dashboard') ? 'active' : '' }}"
+                                    href="{{ route('candidate.dashboard') }}">
+                                    Candidate Dashboard
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.edit-profile') ? 'active' : '' }}"
+                                    href="{{ route('candidate.edit-profile') }}">
+                                    Edit Profile
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.build-resume') ? 'active' : '' }}"
+                                    href="{{ route('candidate.build-resume') }}">
+                                    Build Resume
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.download-cv') ? 'active' : '' }}"
+                                    href="{{ route('candidate.download-cv') }}">
+                                    Download CV
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.public-profile') ? 'active' : '' }}"
+                                    href="{{ route('candidate.public-profile') }}">
+                                    View Public Profile
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.applications') ? 'active' : '' }}"
+                                    href="{{ route('candidate.applications') }}">
+                                    My Job Applications
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.favourites') ? 'active' : '' }}"
+                                    href="{{ route('candidate.favourites') }}">
+                                    My Favourite Jobs
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.alerts') ? 'active' : '' }}"
+                                    href="{{ route('candidate.alerts') }}">
+                                    Job Alerts
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.manage-resume') ? 'active' : '' }}"
+                                    href="{{ route('candidate.manage-resume') }}">
+                                    Manage Resume
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.messages') ? 'active' : '' }}"
+                                    href="{{ route('candidate.messages') }}">
+                                    My Messages
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.followings') ? 'active' : '' }}"
+                                    href="{{ route('candidate.followings') }}">
+                                    My Followings
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.packages') ? 'active' : '' }}"
+                                    href="{{ route('candidate.packages') }}">
+                                    Packages
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('candidate.payment-history') ? 'active' : '' }}"
+                                    href="{{ route('candidate.payment-history') }}">
+                                    Payment History
+                                </a>
+                            </li>
+
+                        </ul>
+                    </li>
+
                     <!-- Contact -->
                     <li class="nav-item">
                         <a class="nav-link" href="#">
