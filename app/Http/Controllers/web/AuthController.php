@@ -39,7 +39,7 @@ class AuthController extends Controller
             if ($request->role === 'employer') {
 
 
-            $username = Str::slug($request->company_name);
+                $username = Str::slug($request->company_name);
 
                 $websiteDomain = parse_url($request->website, PHP_URL_HOST);
                 $emailDomain = substr(strrchr($request->email, "@"), 1);
@@ -51,7 +51,7 @@ class AuthController extends Controller
                         ]
                     ], 422);
                 }
-            }else {
+            } else {
                 $username = Str::slug($request->first_name . '-' . $request->last_name);
             }
 
@@ -267,61 +267,60 @@ class AuthController extends Controller
         Auth::login($user);
 
         return response()->json([
-            'role'=> $user->role->name,
+            'role' => $user->role->name,
             'status' => true,
             'message' => 'Email verified successfully.'
         ]);
     }
 
-// logout 
+    // logout 
     public function logout()
     {
         Auth::logout();
         return redirect()->route('home');
-
     }
 
 
 
     public function login(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-        'password' => 'required|min:6',
-    ]);
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|min:6',
+        ]);
 
-    if ($validator->fails()) {
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'Invalid credentials.'
+            ], 422);
+        }
+
+        // 🚨 Check email verified
+        if (!$user->email_verified) {
+            return response()->json([
+                'status' => false,
+                'otp_required' => true,
+                'message' => 'Please verify your email first.',
+                'user_id' => $user->id
+            ], 403);
+        }
+
+        Auth::login($user, $request->remember ?? false);
+
+        $request->session()->regenerate(); // prevent session fixation
+
         return response()->json([
-            'errors' => $validator->errors()
-        ], 422);
+            'status' => true,
+            'role' => $user->role->name,
+            'message' => 'Login successful.',
+        ]);
     }
-
-    $user = User::where('email', $request->email)->first();
-
-    if (!$user || !Hash::check($request->password, $user->password)) {
-        return response()->json([
-            'message' => 'Invalid credentials.'
-        ], 422);
-    }
-
-    // 🚨 Check email verified
-    if (!$user->email_verified) {
-        return response()->json([
-            'status' => false,
-            'otp_required' => true,
-            'message' => 'Please verify your email first.',
-            'user_id' => $user->id
-        ], 403);
-    }
-
-    Auth::login($user, $request->remember ?? false);
-
-    $request->session()->regenerate(); // prevent session fixation
-
-    return response()->json([
-        'status' => true,
-        'role' => $user->role->name,
-        'message' => 'Login successful.',
-    ]);
-}
 }
