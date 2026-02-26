@@ -105,11 +105,11 @@
                 <div class="navbar-actions d-flex align-items-center gap-2">
 
                     @guest
-                        <a href="#" class="btn btn-outline-primary signin-btn">
+                        <a href="{{ route('login') }}" class="btn btn-outline-primary signin-btn">
                             Sign in
                         </a>
 
-                        <a href="#" class="btn btn-primary register-btn">
+                        <a href="{{ route('register') }}" class="btn btn-primary register-btn">
                             Register
                         </a>
                     @endguest

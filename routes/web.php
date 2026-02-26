@@ -44,3 +44,13 @@ Route::get('/company-detail', function () {
 Route::get('/employer/post-job', function () {
     return view('employer.post-job');
 })->name('employer.post-job');
+
+
+Route::get('/register', function () {
+    return view('auth.register');
+})->name('register');
+
+
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login');
