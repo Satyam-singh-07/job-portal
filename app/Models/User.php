@@ -63,4 +63,16 @@ public function role()
     {
         return self::where('username', $username)->first();
     }
+
+
+
+     public function isEmployer()
+    {
+        return $this->role?->name === 'employer';
+    }
+
+    public function isCandidate()
+    {
+        return $this->role?->name === 'candidate';
+    }
 }
