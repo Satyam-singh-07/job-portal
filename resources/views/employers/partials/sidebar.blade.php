@@ -19,8 +19,8 @@
                         <li class="@if (request()->routeIs('employer.post-job')) active @endif">
                             <a href="{{ route('employer.post-job') }}"><i class="fa-solid fa-plus"></i> Post a Job</a>
                         </li>
-                        <li>
-                            <a href="#"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
+                        <li class="@if (request()->routeIs('employer.manage-jobs')) active @endif">
+                            <a href="{{ route('employer.manage-jobs') }}"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
                         </li>
                         {{-- <li>
                             <a href="#"><i class="fa-solid fa-layer-group"></i> CV Search Packages</a>
@@ -30,10 +30,10 @@
                         </li>
                         <li>
                             <a href="#"><i class="fa-solid fa-envelope"></i> Company Messages</a>
-                        </li>
-                        <li>
-                            <a href="#"><i class="fa-solid fa-users"></i> Company Followers</a>
                         </li> --}}
+                        {{-- <li>
+                            <a href="#"><i class="fa-solid fa-users"></i> Company Followers</a>
+                        </li>  --}}
                         <li>
                             <a href="{{ route('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
                         </li>

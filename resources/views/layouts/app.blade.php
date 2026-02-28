@@ -20,7 +20,7 @@
     <link href="{{ asset('css/main.css') }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css">
 
-    @stack('styles')
+    @yield('styles')
 </head>
 
 <body>
@@ -90,9 +90,5 @@
         @endif
     </div>
 
-
-
-
-    
 
 </html>
