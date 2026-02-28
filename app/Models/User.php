@@ -64,6 +64,11 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
+    public function jobs()
+    {
+        return $this->hasMany(Job::class);
+    }
+
     public static function findByUsername($username)
     {
         return self::where('username', $username)->first();

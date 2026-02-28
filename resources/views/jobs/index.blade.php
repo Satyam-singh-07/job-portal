@@ -16,35 +16,33 @@
                     Search thousands of curated openings across industries, experience
                     levels, and locations.
                 </p>
-                <form class="jobs-hero-form">
+                <form id="filterForm" class="jobs-hero-form">
                     <div class="row g-3">
                         <div class="col-lg-5 col-md-6">
                             <label class="jobs-hero-field">
                                 <i class="fa fa-search" aria-hidden="true"></i>
-                                <input type="text" class="form-control" placeholder="Job title, keyword or company" />
+                                <input type="text" name="search" id="searchInput" class="form-control" value="{{ request('search') }}" placeholder="Job title, keyword or company" />
                             </label>
                         </div>
                         <div class="col-lg-3 col-md-6">
                             <label class="jobs-hero-field select-field">
                                 <i class="fa fa-map-marker" aria-hidden="true"></i>
-                                <select class="form-select">
-                                    <option selected>Location</option>
-                                    <option>Fairbanks</option>
-                                    <option>Bessemer</option>
-                                    <option>Barrington</option>
-                                    <option>Durant</option>
+                                <select name="location" id="locationSelect" class="form-select">
+                                    <option value="Location">Location</option>
+                                    @foreach($jobs->pluck('location')->unique() as $loc)
+                                        <option value="{{ $loc }}" {{ request('location') == $loc ? 'selected' : '' }}>{{ $loc }}</option>
+                                    @endforeach
                                 </select>
                             </label>
                         </div>
                         <div class="col-lg-3 col-md-6">
                             <label class="jobs-hero-field select-field">
                                 <i class="fa fa-briefcase" aria-hidden="true"></i>
-                                <select class="form-select">
-                                    <option selected>Category</option>
-                                    <option>Design</option>
-                                    <option>Technology</option>
-                                    <option>Marketing</option>
-                                    <option>Finance</option>
+                                <select name="category" id="categorySelect" class="form-select">
+                                    <option value="Category">Category</option>
+                                    @foreach($jobs->pluck('department')->unique()->filter() as $cat)
+                                        <option value="{{ $cat }}" {{ request('category') == $cat ? 'selected' : '' }}>{{ $cat }}</option>
+                                    @endforeach
                                 </select>
                             </label>
                         </div>
@@ -66,419 +64,136 @@
                     <div class="filter-card">
                         <h5>Job Type</h5>
                         <ul class="filter-list">
-                            <li>
-                                <label><input type="checkbox" /> Full Time/Permanent
-                                    <span>12</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Contract <span>33</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Part Time <span>18</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Internship <span>11</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Freelance <span>9</span></label>
-                            </li>
+                            @php
+                                $types = ['Full Time', 'Part Time', 'Contract', 'Freelance', 'Internship'];
+                            @endphp
+                            @foreach($types as $type)
+                                <li>
+                                    <label>
+                                        <input type="checkbox" name="types[]" value="{{ $type }}" class="filter-checkbox" {{ is_array(request('types')) && in_array($type, request('types')) ? 'checked' : '' }} /> 
+                                        {{ $type }}
+                                    </label>
+                                </li>
+                            @endforeach
                         </ul>
                     </div>
                     <div class="filter-card">
-                        <h5>Location</h5>
+                        <h5>Experience</h5>
                         <ul class="filter-list">
-                            <li>
-                                <label><input type="checkbox" /> Fairbanks <span>8</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Bessemer <span>6</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Barrington <span>4</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Durant <span>3</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Blaine <span>2</span></label>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="filter-card">
-                        <h5>Industry</h5>
-                        <ul class="filter-list">
-                            <li>
-                                <label><input type="checkbox" /> Information Technology
-                                    <span>22</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Advertising/PR
-                                    <span>15</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Media &amp; Communications
-                                    <span>13</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Fashion <span>9</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> Health &amp; Fitness
-                                    <span>7</span></label>
-                            </li>
-                        </ul>
-                    </div>
-                    <div class="filter-card">
-                        <h5>Salary Range</h5>
-                        <ul class="filter-list">
-                            <li>
-                                <label><input type="checkbox" /> $2k - $4k <span>12</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> $4k - $6k <span>9</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> $6k - $10k <span>6</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> $10k - $15k <span>4</span></label>
-                            </li>
-                            <li>
-                                <label><input type="checkbox" /> $15k+ <span>3</span></label>
-                            </li>
+                            @php
+                                $experiences = ['Graduate', '1-2 years', '3+ years', '5+ years'];
+                            @endphp
+                            @foreach($experiences as $exp)
+                                <li>
+                                    <label>
+                                        <input type="checkbox" name="experience[]" value="{{ $exp }}" class="filter-checkbox" {{ is_array(request('experience')) && in_array($exp, request('experience')) ? 'checked' : '' }} /> 
+                                        {{ $exp }}
+                                    </label>
+                                </li>
+                            @endforeach
                         </ul>
                     </div>
                 </aside>
                 <div class="col-lg-9">
                     <div class="jobs-board-header d-flex flex-wrap align-items-center justify-content-between gap-3">
                         <div>
-                            <h2>18 Jobs Found</h2>
-                            <span class="jobs-count">Showing 1 - 18 of 18 results</span>
+                            <h2 id="totalFound">{{ $jobs->total() }} Jobs Found</h2>
+                            <span class="jobs-count" id="countText">Showing {{ $jobs->firstItem() }} - {{ $jobs->lastItem() }} of {{ $jobs->total() }} results</span>
                         </div>
                         <div class="jobs-actions d-flex align-items-center gap-3 flex-wrap">
-                            <div class="jobs-view-toggle" role="group" aria-label="Toggle job view">
-                                <a href="job-listing.html" class="view-btn" aria-label="Grid view"><i class="fa fa-th-large"
-                                        aria-hidden="true"></i></a>
-                                <a href="job-listing.html" class="view-btn active" aria-label="List view"><i
-                                        class="fa fa-bars" aria-hidden="true"></i></a>
-                            </div>
                             <div class="jobs-sort d-flex align-items-center gap-2">
-                                <select class="form-select">
-                                    <option selected>Most recent</option>
-                                    <option>Salary (High to Low)</option>
-                                    <option>Salary (Low to High)</option>
-                                    <option>Featured</option>
+                                <select name="sort" id="sortSelect" class="form-select filter-select">
+                                    <option value="recent" {{ request('sort') == 'recent' ? 'selected' : '' }}>Most recent</option>
+                                    <option value="salary_high" {{ request('sort') == 'salary_high' ? 'selected' : '' }}>Salary (High to Low)</option>
+                                    <option value="salary_low" {{ request('sort') == 'salary_low' ? 'selected' : '' }}>Salary (Low to High)</option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    <div class="job-list">
-                        <div class="job-list-item featured">
-                            <div class="job-card-status">
-                                <span class="job-type fulltime">Full Time/Permanent</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo1.jpg" alt="Multimedia Design" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">UI UX Designer Required</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Multimedia Design</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Fairbanks</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $2500 -
-                                            $3000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        We are seeking a multi-disciplinary designer to ship
-                                        intuitive product experiences for our expanding SaaS
-                                        platform.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2183</span>
-                            </div>
-                        </div>
-                        <div class="job-list-item">
-                            <div class="job-card-status">
-                                <span class="job-type contract">Contract</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo1.jpg" alt="Multimedia Design" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">Graphic Designer Required</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Multimedia Design</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Bessemer</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $10,000
-                                            - $20,000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        Contract opportunity to create compelling digital & print
-                                        assets for global brand launches.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2184</span>
-                            </div>
-                        </div>
-                        <div class="job-list-item">
-                            <div class="job-card-status">
-                                <span class="job-type contract">Contract</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo1.jpg" alt="Multimedia Design" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">Full Stack Developer</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Multimedia Design</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Bessemer</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $10,000
-                                            - $20,000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        Join our remote engineering pod to build new customer
-                                        journeys using React, Node, and GraphQL.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2185</span>
-                            </div>
-                        </div>
-                        <div class="job-list-item featured">
-                            <div class="job-card-status">
-                                <span class="job-type fulltime">Full Time/Permanent</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo7.jpg" alt="Connect People" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">Full Stack Designer</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Connect People</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Barrington</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $6,000 -
-                                            $8,000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        Lead design systems that power mobile & web apps for our
-                                        fast-growing HR solutions suite.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2186</span>
-                            </div>
-                        </div>
-                        <div class="job-list-item">
-                            <div class="job-card-status">
-                                <span class="job-type contract">Contract</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo2.jpg" alt="Power Wave" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">Dot Developer</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Power Wave</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Durant</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $6,000 -
-                                            $12,000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        Modernize enterprise dashboards and microservices in .NET
-                                        for a national logistics brand.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2187</span>
-                            </div>
-                        </div>
-                        <div class="job-list-item">
-                            <div class="job-card-status">
-                                <span class="job-type fulltime">Full Time/Permanent</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo16.jpg" alt="Mayan Design Studios" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">SEO Expert</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Mayan Design Studios</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Blaine</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $4,000 -
-                                            $8,000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        Drive technical SEO, link-building, and content
-                                        experiments for our portfolio of ecommerce brands.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2188</span>
-                            </div>
-                        </div>
-                        <div class="job-list-item">
-                            <div class="job-card-status">
-                                <span class="job-type contract">Contract</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo12.jpg" alt="Multimedia Design" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">Digital Product Designer</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Multimedia Design</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Bessemer</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $6,500 -
-                                            $9,000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        Craft high-fidelity prototypes, user flows, and
-                                        interaction patterns for fintech experiences.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2189</span>
-                            </div>
-                        </div>
-                        <div class="job-list-item">
-                            <div class="job-card-status">
-                                <span class="job-type fulltime">Full Time/Permanent</span>
-                            </div>
-                            <div class="job-list-main">
-                                <div class="job-list-logo">
-                                    <img src="images/employers/emplogo10.jpg" alt="Media Wave" />
-                                </div>
-                                <div class="job-list-content">
-                                    <h4><a href="#.">Marketing Analyst</a></h4>
-                                    <div class="job-list-meta">
-                                        <span><i class="fa fa-briefcase" aria-hidden="true"></i>
-                                            Media Wave</span>
-                                        <span><i class="fa fa-map-marker" aria-hidden="true"></i>
-                                            Fairbanks</span>
-                                        <span><i class="fa fa-money" aria-hidden="true"></i> $5,000 -
-                                            $10,000</span>
-                                    </div>
-                                    <p class="job-list-summary">
-                                        Measure campaign performance and build dashboards that
-                                        surface high-impact growth insights.
-                                    </p>
-                                </div>
-                                <div class="job-list-actions">
-                                    <a href="#." class="btn btn-outline-primary btn-sm">View Details</a>
-                                    <button class="bookmark" aria-label="Save job">
-                                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="job-list-footer d-flex justify-content-between align-items-center flex-wrap">
-                                <span class="job-list-posted">Posted Mar 07, 2025</span>
-                                <span class="job-list-posted">ID: JP-2190</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="jobs-pagination">
-                        <nav aria-label="Jobs navigation">
-                            <ul class="pagination justify-content-center">
-                                <li class="page-item disabled">
-                                    <span class="page-link">Previous</span>
-                                </li>
-                                <li class="page-item active">
-                                    <span class="page-link">1</span>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#.">2</a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#.">3</a>
-                                </li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#.">Next</a>
-                                </li>
-                            </ul>
-                        </nav>
+                    
+                    <div id="jobListContainer">
+                        @include('jobs.partials.job-list', ['jobs' => $jobs])
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    const $filterForm = $('#filterForm');
+    const $jobListContainer = $('#jobListContainer');
+    const $totalFound = $('#totalFound');
+    const $countText = $('#countText');
+
+    function fetchJobs() {
+        const formData = $filterForm.serialize() + '&' + $('.filter-checkbox:checked').serialize() + '&' + $('.filter-select').serialize();
+        
+        $jobListContainer.css('opacity', '0.5');
+
+        $.ajax({
+            url: "{{ route('jobs.index') }}",
+            data: formData,
+            success: function(response) {
+                $jobListContainer.html(response.html);
+                $totalFound.text(response.total_found);
+                $countText.text(response.count_text);
+                $jobListContainer.css('opacity', '1');
+                
+                // Update URL without refreshing
+                const newUrl = window.location.pathname + '?' + formData;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+            }
+        });
+    }
+
+    // Trigger on form submit
+    $filterForm.on('submit', function(e) {
+        e.preventDefault();
+        fetchJobs();
+    });
+
+    // Trigger on checkbox change
+    $('.filter-checkbox, .filter-select').on('change', function() {
+        fetchJobs();
+    });
+
+    // Handle pagination clicks
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        const url = $(this).attr('href');
+        const page = new URL(url).searchParams.get('page');
+        
+        const formData = $filterForm.serialize() + '&' + $('.filter-checkbox:checked').serialize() + '&' + $('.filter-select').serialize() + '&page=' + page;
+
+        $jobListContainer.css('opacity', '0.5');
+
+        $.ajax({
+            url: "{{ route('jobs.index') }}",
+            data: formData,
+            success: function(response) {
+                $jobListContainer.html(response.html);
+                $totalFound.text(response.total_found);
+                $countText.text(response.count_text);
+                $jobListContainer.css('opacity', '1');
+                
+                $('html, body').animate({ scrollTop: $(".jobs-board").offset().top - 100 }, 200);
+
+                const newUrl = window.location.pathname + '?' + formData;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+            }
+        });
+    });
+
+    // Real-time search with debounce
+    let searchTimer;
+    $('#searchInput').on('keyup', function() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(fetchJobs, 500);
+    });
+});
+</script>
 @endsection

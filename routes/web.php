@@ -24,13 +24,10 @@ Route::get('/', function () {
     return view('home');
 })->name('home');
 
-Route::get('/jobs', function () {
-    return view('jobs.index');
-})->name('jobs.index');
+use App\Http\Controllers\web\JobController;
 
-Route::get('/job-detail', function () {
-    return view('jobs.show');
-})->name('jobs.show');
+Route::get('/jobs', [JobController::class, 'index'])->name('jobs.index');
+Route::get('/jobs/{slug}', [JobController::class, 'show'])->name('jobs.show');
 
 Route::get('/employers', function () {
     return view('employers.index');
@@ -47,9 +44,6 @@ Route::get('/company/@{username}', function ($username) {
     return view('employers.show', compact('username'));
 })->name('company.show');
 
-Route::get('/employer/post-job', function () {
-    return view('employer.post-job');
-})->name('employer.post-job');
 
 Route::prefix('candidate')->name('candidate.')->group(function () {
 
@@ -154,8 +148,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/profile/logo', [CompanyProfileController::class, 'updateLogo'])->name('profile.logo');
         Route::put('update-company-profile', [CompanyProfileController::class, 'update'])->name('profile.update');
 
-        Route::get('/post-job', function () {
-            return view('employer.post-job');
-        })->name('post-job');
+        Route::get('/post-job', [App\Http\Controllers\Employer\JobController::class, 'create'])->name('post-job');
+        Route::post('/post-job', [App\Http\Controllers\Employer\JobController::class, 'store'])->name('post-job.store');
+        Route::get('/manage-jobs', [App\Http\Controllers\Employer\JobController::class, 'index'])->name('manage-jobs');
+        Route::get('/jobs/{job}/edit', [App\Http\Controllers\Employer\JobController::class, 'edit'])->name('jobs.edit');
+        Route::put('/jobs/{job}', [App\Http\Controllers\Employer\JobController::class, 'update'])->name('jobs.update');
+        Route::post('/jobs/{job}/publish', [App\Http\Controllers\Employer\JobController::class, 'publish'])->name('jobs.publish');
+        Route::post('/jobs/{job}/close', [App\Http\Controllers\Employer\JobController::class, 'close'])->name('jobs.close');
+        Route::post('/jobs/{job}/reopen', [App\Http\Controllers\Employer\JobController::class, 'reopen'])->name('jobs.reopen');
+        Route::delete('/jobs/{job}', [App\Http\Controllers\Employer\JobController::class, 'destroy'])->name('jobs.destroy');
     });
 });
