@@ -74,9 +74,7 @@ Route::prefix('candidate')->name('candidate.')->group(function () {
         return view('candidates.download-cv');
     })->name('download-cv');
 
-    Route::get('/public-profile', function () {
-        return view('candidates.public-profile');
-    })->name('public-profile');
+    Route::get('/public-profile', [CandidateProfileController::class, 'publicProfile'])->name('public-profile');
 
     Route::get('/applications', function () {
         return view('candidates.applications');
@@ -145,6 +143,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/edit-profile', [CandidateProfileController::class, 'edit'])->name('edit-profile');
         Route::put('/edit-profile', [CandidateProfileController::class, 'update'])->name('edit-profile.update');
         Route::post('/edit-profile/photo', [CandidateProfileController::class, 'updatePhoto'])->name('edit-profile.photo');
+        Route::post('/edit-profile/visibility', [CandidateProfileController::class, 'updateVisibility'])->name('edit-profile.visibility');
     });
 
     Route::middleware('role:employer')->prefix('employer')->name('employer.')->group(function () {

@@ -26,11 +26,17 @@ class CandidateProfile extends Model
         'skills',
         'social_links',
         'resume',
+        'is_searchable',
+        'is_public_link_active',
+        'is_indexed_by_search_engines',
     ];
 
     protected $casts = [
         'skills' => 'array',
         'social_links' => 'array',
+        'is_searchable' => 'boolean',
+        'is_public_link_active' => 'boolean',
+        'is_indexed_by_search_engines' => 'boolean',
     ];
 
     public function user()

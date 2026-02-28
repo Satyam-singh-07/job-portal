@@ -17,6 +17,32 @@ class CandidateProfileController extends Controller
         return view('candidates.edit-profile', compact('user', 'profile'));
     }
 
+    public function publicProfile()
+    {
+        $user = auth()->user();
+        $profile = $user->candidateProfile ?? $user->candidateProfile()->create();
+
+        return view('candidates.public-profile', compact('user', 'profile'));
+    }
+
+    public function updateVisibility(Request $request)
+    {
+        $request->validate([
+            'field' => 'required|string|in:is_searchable,is_public_link_active,is_indexed_by_search_engines',
+            'value' => 'required|boolean',
+        ]);
+
+        $profile = auth()->user()->candidateProfile;
+        $profile->update([
+            $request->field => $request->value,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Visibility setting updated successfully.',
+        ]);
+    }
+
     public function update(
         UpdateCandidateProfileRequest $request,
         CandidateProfileService $service
