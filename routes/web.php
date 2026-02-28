@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Candidate\CandidateProfileController;
 use App\Http\Controllers\Employer\CompanyProfileController;
 use App\Http\Controllers\web\AuthController;
 use App\Models\User;
@@ -64,9 +65,6 @@ Route::prefix('candidate')->name('candidate.')->group(function () {
     Route::get('/detail', function () {
         return view('candidates.show');
     })->name('show');
-    Route::get('/edit-profile', function () {
-        return view('candidates.edit-profile');
-    })->name('edit-profile');
 
     Route::get('/build-resume', function () {
         return view('candidates.build-resume');
@@ -143,6 +141,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', function () {
             return view('candidates.dashboard');
         })->name('dashboard');
+
+        Route::get('/edit-profile', [CandidateProfileController::class, 'edit'])->name('edit-profile');
+        Route::put('/edit-profile', [CandidateProfileController::class, 'update'])->name('edit-profile.update');
+        Route::post('/edit-profile/photo', [CandidateProfileController::class, 'updatePhoto'])->name('edit-profile.photo');
     });
 
     Route::middleware('role:employer')->prefix('employer')->name('employer.')->group(function () {

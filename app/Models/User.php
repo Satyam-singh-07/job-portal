@@ -39,6 +39,11 @@ class User extends Authenticatable
         'rating',
     ];
 
+    public function candidateProfile()
+    {
+        return $this->hasOne(CandidateProfile::class);
+    }
+
     public function role()
     {
         return $this->belongsTo(Role::class);
