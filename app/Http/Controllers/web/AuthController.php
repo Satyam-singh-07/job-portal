@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResendOtpRequest;
 use App\Http\Requests\Auth\VerifyOtpRequest;
 use App\Http\Services\Auth\AuthService;
+use App\Http\Services\Auth\OtpService;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;

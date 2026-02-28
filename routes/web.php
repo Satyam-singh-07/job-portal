@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Employer\CompanyProfileController;
 use App\Http\Controllers\web\AuthController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -41,8 +42,7 @@ Route::get('/employer/dashboard', function () {
 
 Route::get('/company/@{username}', function ($username) {
 
-User::findByUsername($username) ?? abort(404, 'Company not found');
-
+    User::findByUsername($username) ?? abort(404, 'Company not found');
 
     return view('employers.show', compact('username'));
 })->name('company.show');
@@ -50,11 +50,6 @@ User::findByUsername($username) ?? abort(404, 'Company not found');
 Route::get('/employer/post-job', function () {
     return view('employer.post-job');
 })->name('employer.post-job');
-
-
-
-
-
 
 Route::prefix('candidate')->name('candidate.')->group(function () {
 
@@ -118,14 +113,11 @@ Route::prefix('candidate')->name('candidate.')->group(function () {
     })->name('payment-history');
 });
 
-
-
 Route::middleware('guest')->group(function () {
 
     Route::get('/register', function () {
         return view('auth.register');
     })->name('register');
-
 
     Route::get('/login', function () {
         return view('auth.login');
@@ -133,8 +125,8 @@ Route::middleware('guest')->group(function () {
 
     Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:5,1');
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
-  
-    //auth routes
+
+    // auth routes
     Route::post('/register', [AuthController::class, 'store'])
         ->middleware('throttle:10,1');
 
@@ -142,11 +134,9 @@ Route::middleware('guest')->group(function () {
         ->middleware('throttle:10,1')->name('login.post');
 });
 
-
 Route::middleware('auth')->group(function () {
 
     Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
-
 
     Route::middleware('role:candidate')->prefix('candidate')->name('candidate.')->group(function () {
 
@@ -155,17 +145,14 @@ Route::middleware('auth')->group(function () {
         })->name('dashboard');
     });
 
-
     Route::middleware('role:employer')->prefix('employer')->name('employer.')->group(function () {
         Route::get('/dashboard', function () {
             return view('employers.dashboard');
         })->name('dashboard');
 
-        Route::get('/company-profile', function () {
-            return view('employers.company-profile');
-        })->name('company-profile');
-
-
+        Route::get('/company-profile', [CompanyProfileController::class, 'edit'])->name('company-profile');
+        Route::post('/profile/logo', [CompanyProfileController::class, 'updateLogo'])->name('profile.logo');
+        Route::put('update-company-profile', [CompanyProfileController::class, 'update'])->name('profile.update');
 
         Route::get('/post-job', function () {
             return view('employer.post-job');

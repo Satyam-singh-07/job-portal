@@ -1,5 +1,6 @@
  <aside class="dashboard-sidebar employer-sidebar">
                     <div class="sidebar-header">
+                       
                         <h2>{{ auth()->user()->company_name }}</h2>
                         <p>{{ auth()->user()->email }}</p>
                         <span class="company-pill">Premium Employer</span>

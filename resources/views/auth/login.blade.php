@@ -176,7 +176,6 @@
             toggleButton(btn, false);
 
             if (data.status) {
-
               if (data.role === "candidate") {
                                       window.location.href = "/candidate/dashboard";
                                   } else {

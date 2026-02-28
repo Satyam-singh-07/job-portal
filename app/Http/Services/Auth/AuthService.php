@@ -49,6 +49,8 @@ class AuthService
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'username' => $username,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
                 'otp_code' => $this->otpService->hash($otp),
                 'otp_expires_at' => now()->addMinutes(10),
                 'email_verified' => false,

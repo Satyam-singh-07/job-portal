@@ -41,6 +41,8 @@
     <script src="{{ asset('js/script.js') }}"></script>
 
     @yield('scripts')
+
+
 <div class="position-fixed top-0 end-0 p-3" style="z-index: 9999">
     <div id="liveToast" class="toast align-items-center text-white bg-success border-0" role="alert">
         <div class="d-flex">
@@ -50,5 +52,47 @@
     </div>
 </div>
 </body>
+
+
+<!-- Floating Notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 2000;">
+        @if(session('success'))
+            <div class="toast align-items-center text-bg-success border-0 show" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ session('success') }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="toast align-items-center text-bg-danger border-0 show" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        {{ session('error') }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        @endif
+
+        @if ($errors->any())
+            @foreach ($errors->all() as $error)
+                <div class="toast text-bg-danger border-0 show">
+                    <div class="d-flex">
+                        <div class="toast-body">{{ $error }}</div>
+                        <button type="button" class="btn-close btn-close-white m-auto me-2" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            @endforeach
+        @endif
+    </div>
+
+
+
+
+    
 
 </html>
