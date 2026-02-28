@@ -42,7 +42,7 @@
                                     @if ($profile->title)
                                         {{ $profile->title }} ·
                                     @endif
-                                    {{ $profile->work_preference ?? 'Remote friendly' }} · 
+                                    {{ $profile->work_preference ?? 'Remote friendly' }} ·
                                     {{ Str::limit($user->summary, 100) }}
                                 </p>
                                 <ul>
@@ -75,7 +75,8 @@
                                     </p>
                                 </div>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" class="visibility-toggle" data-field="is_searchable" {{ $profile->is_searchable ? 'checked' : '' }} />
+                                    <input type="checkbox" class="visibility-toggle" data-field="is_searchable"
+                                        {{ $profile->is_searchable ? 'checked' : '' }} />
                                     <span class="toggle-slider"></span>
                                 </label>
                             </li>
@@ -87,7 +88,8 @@
                                     </p>
                                 </div>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" class="visibility-toggle" data-field="is_public_link_active" {{ $profile->is_public_link_active ? 'checked' : '' }} />
+                                    <input type="checkbox" class="visibility-toggle" data-field="is_public_link_active"
+                                        {{ $profile->is_public_link_active ? 'checked' : '' }} />
                                     <span class="toggle-slider"></span>
                                 </label>
                             </li>
@@ -99,7 +101,9 @@
                                     </p>
                                 </div>
                                 <label class="toggle-switch">
-                                    <input type="checkbox" class="visibility-toggle" data-field="is_indexed_by_search_engines" {{ $profile->is_indexed_by_search_engines ? 'checked' : '' }} />
+                                    <input type="checkbox" class="visibility-toggle"
+                                        data-field="is_indexed_by_search_engines"
+                                        {{ $profile->is_indexed_by_search_engines ? 'checked' : '' }} />
                                     <span class="toggle-slider"></span>
                                 </label>
                             </li>
@@ -149,40 +153,44 @@
 @endsection
 
 @section('scripts')
-<script>
-    document.getElementById('copyProfileLink')?.addEventListener('click', function() {
-        const url = "{{ config('app.url') }}/candidate/{{ $user->username }}";
-        navigator.clipboard.writeText(url).then(() => {
-            alert('Profile link copied to clipboard!');
+    <script>
+        document.getElementById('copyProfileLink')?.addEventListener('click', function() {
+            const url = "{{ config('app.url') }}/candidate/{{ $user->username }}";
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Profile link copied to clipboard!');
+            });
         });
-    });
 
-    document.querySelectorAll('.visibility-toggle').forEach(toggle => {
-        toggle.addEventListener('change', async function() {
-            const field = this.getAttribute('data-field');
-            const value = this.checked ? 1 : 0;
+        document.querySelectorAll('.visibility-toggle').forEach(toggle => {
+            toggle.addEventListener('change', async function() {
+                const field = this.getAttribute('data-field');
+                const value = this.checked ? 1 : 0;
 
-            try {
-                const response = await fetch("{{ route('candidate.edit-profile.visibility') }}", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({ field, value })
-                });
+                try {
+                    const response = await fetch("{{ route('candidate.edit-profile.visibility') }}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')
+                                .content
+                        },
+                        body: JSON.stringify({
+                            field,
+                            value
+                        })
+                    });
 
-                const data = await response.json();
-                if (!data.status) {
-                    this.checked = !this.checked; // Revert if failed
-                    alert('Failed to update visibility setting.');
+                    const data = await response.json();
+                    if (!data.status) {
+                        this.checked = !this.checked; // Revert if failed
+                        alert('Failed to update visibility setting.');
+                    }
+                } catch (error) {
+                    this.checked = !this.checked; // Revert if error
+                    console.error('Error updating visibility:', error);
+                    alert('An error occurred. Please try again.');
                 }
-            } catch (error) {
-                this.checked = !this.checked; // Revert if error
-                console.error('Error updating visibility:', error);
-                alert('An error occurred. Please try again.');
-            }
+            });
         });
-    });
-</script>
+    </script>
 @endsection
