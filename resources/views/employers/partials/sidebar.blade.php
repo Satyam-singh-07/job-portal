@@ -13,13 +13,13 @@
                             <a href="{{ route('employer.company-profile') }}"><i class="fa-solid fa-user-pen"></i> Edit Company Details</a>
                         </li>
                         <li>
-                            <a href="{{ route('company.show', ['username' => auth()->user()->username]) }}"><i class="fa-solid fa-building"></i> Company Public
+                            <a href="{{ route('company.show', ['username' => ltrim(auth()->user()->username, '@')]) }}"><i class="fa-solid fa-building"></i> Company Public
                                 Profile</a>
                         </li>
                         <li class="@if (request()->routeIs('employer.post-job')) active @endif">
                             <a href="{{ route('employer.post-job') }}"><i class="fa-solid fa-plus"></i> Post a Job</a>
                         </li>
-                        <li class="@if (request()->routeIs('employer.manage-jobs')) active @endif">
+                        <li class="@if (request()->routeIs('employer.manage-jobs') || request()->routeIs('employer.jobs.applications')) active @endif">
                             <a href="{{ route('employer.manage-jobs') }}"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
                         </li>
                          <li>

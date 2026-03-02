@@ -30,6 +30,9 @@ class User extends Authenticatable
         'desired_role',
         'otp_code',
         'otp_expires_at',
+        'otp_attempts',
+        'otp_locked_until',
+        'otp_last_sent_at',
         'email_verified',
         'username',
         'logo',
@@ -67,6 +70,11 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'otp_expires_at' => 'datetime',
+        'otp_locked_until' => 'datetime',
+        'otp_last_sent_at' => 'datetime',
+        'otp_attempts' => 'integer',
+        'email_verified' => 'boolean',
     ];
 
     public function jobs()
@@ -77,6 +85,17 @@ class User extends Authenticatable
     public function applications()
     {
         return $this->hasMany(JobApplication::class);
+    }
+
+    public function jobAlerts()
+    {
+        return $this->hasMany(JobAlert::class);
+    }
+
+    public function favoriteJobs()
+    {
+        return $this->belongsToMany(Job::class, 'job_favorites')
+            ->withTimestamps();
     }
 
     public static function findByUsername($username)

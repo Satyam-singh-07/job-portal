@@ -5,8 +5,10 @@ namespace App\Http\Services\web;
 use App\Models\Job;
 use App\Models\JobApplication;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class JobApplicationService
 {
@@ -21,24 +23,49 @@ class JobApplicationService
      */
     public function apply(User $user, Job $job, array $data): JobApplication
     {
-        // Basic checks
-        if (!$user->isCandidate()) {
-            throw new \Exception('Only candidates can apply for jobs.');
+        if (! $user->isCandidate()) {
+            throw ValidationException::withMessages([
+                'application' => ['Only candidates can apply for jobs.'],
+            ]);
         }
 
         if ($job->status !== 'Published') {
-            throw new \Exception('This job is no longer accepting applications.');
+            throw ValidationException::withMessages([
+                'application' => ['This job is no longer accepting applications.'],
+            ]);
         }
 
-        // Check if already applied
-        if ($this->hasAlreadyApplied($user, $job)) {
-            throw new \Exception('You have already applied for this position.');
+        if (! $user->candidateProfile || ! $user->candidateProfile->resume) {
+            throw ValidationException::withMessages([
+                'application' => ['Please complete your profile and upload a resume before applying.'],
+            ]);
         }
 
         try {
             return DB::transaction(function () use ($user, $job, $data) {
-                // Use default resume from profile if not provided in $data
                 $resumePath = $data['resume_path'] ?? ($user->candidateProfile->resume ?? null);
+
+                $existingApplication = JobApplication::withTrashed()
+                    ->where('user_id', $user->id)
+                    ->where('job_id', $job->id)
+                    ->first();
+
+                if ($existingApplication && ! $existingApplication->trashed()) {
+                    throw ValidationException::withMessages([
+                        'application' => ['You have already applied for this position.'],
+                    ]);
+                }
+
+                if ($existingApplication && $existingApplication->trashed()) {
+                    $existingApplication->restore();
+                    $existingApplication->update([
+                        'cover_letter' => $data['cover_letter'] ?? null,
+                        'resume_path' => $resumePath,
+                        'status' => 'Pending',
+                    ]);
+
+                    return $existingApplication->fresh();
+                }
 
                 return JobApplication::create([
                     'job_id' => $job->id,
@@ -48,6 +75,22 @@ class JobApplicationService
                     'status' => 'Pending',
                 ]);
             });
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (QueryException $e) {
+            if ($this->isDuplicateApplicationError($e)) {
+                throw ValidationException::withMessages([
+                    'application' => ['You have already applied for this position.'],
+                ]);
+            }
+
+            Log::error('Database error while applying for job.', [
+                'user_id' => $user->id,
+                'job_id' => $job->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
         } catch (\Exception $e) {
             Log::error('Error applying for job: ' . $e->getMessage(), [
                 'user_id' => $user->id,
@@ -107,5 +150,22 @@ class JobApplicationService
         return JobApplication::where('user_id', $user->id)
             ->where('job_id', $job->id)
             ->exists();
+    }
+
+    protected function isDuplicateApplicationError(QueryException $e): bool
+    {
+        $errorInfo = $e->errorInfo;
+
+        if (! is_array($errorInfo)) {
+            return false;
+        }
+
+        $sqlState = $errorInfo[0] ?? null;
+        $driverCode = $errorInfo[1] ?? null;
+        $message = (string) ($errorInfo[2] ?? '');
+
+        return $sqlState === '23000'
+            && (int) $driverCode === 1062
+            && str_contains($message, 'job_applications_job_id_user_id_unique');
     }
 }

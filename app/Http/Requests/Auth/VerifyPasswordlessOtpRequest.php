@@ -6,9 +6,9 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class LoginRequest extends FormRequest
+class VerifyPasswordlessOtpRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
@@ -21,11 +21,11 @@ class LoginRequest extends FormRequest
         ]);
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'email' => 'required|string|email:rfc|max:255',
-            'password' => 'required|string|min:6|max:255',
+            'otp' => 'required|digits:6',
             'remember' => 'sometimes|boolean',
         ];
     }

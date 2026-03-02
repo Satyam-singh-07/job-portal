@@ -56,4 +56,15 @@ class Job extends Model
     {
         return $this->hasMany(JobApplication::class);
     }
+
+    public function favoritedBy()
+    {
+        return $this->belongsToMany(User::class, 'job_favorites')
+            ->withTimestamps();
+    }
+
+    public function jobViews()
+    {
+        return $this->hasMany(JobView::class);
+    }
 }

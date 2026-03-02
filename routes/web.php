@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\Candidate\CandidateProfileController;
+use App\Http\Controllers\Candidate\FavouriteJobController;
+use App\Http\Controllers\Candidate\JobAlertController;
 use App\Http\Controllers\Employer\CompanyProfileController;
 use App\Http\Controllers\web\AuthController;
+use App\Http\Controllers\web\EmployerController;
 use App\Http\Controllers\web\JobApplicationController;
 use App\Models\User;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,12 +43,7 @@ Route::get('/employer/dashboard', function () {
     return view('employers.dashboard');
 })->name('employer.dashboard');
 
-Route::get('/company/@{username}', function ($username) {
-
-    User::findByUsername($username) ?? abort(404, 'Company not found');
-
-    return view('employers.show', compact('username'));
-})->name('company.show');
+Route::get('/company/@{username}', [EmployerController::class, 'show'])->name('company.show');
 
 Route::prefix('candidate')->name('candidate.')->group(function () {
 
@@ -73,14 +72,6 @@ Route::prefix('candidate')->name('candidate.')->group(function () {
     Route::get('/applications', function () {
         return view('candidates.applications');
     })->name('applications');
-
-    Route::get('/favourites', function () {
-        return view('candidates.favourites');
-    })->name('favourites');
-
-    Route::get('/alerts', function () {
-        return view('candidates.alerts');
-    })->name('alerts');
 
     Route::get('/manage-resume', function () {
         return view('candidates.manage-resume');
@@ -113,15 +104,21 @@ Route::middleware('guest')->group(function () {
         return view('auth.login');
     })->name('login');
 
-    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:5,1');
-    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->middleware('throttle:otp-resend');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
+    Route::post('/passwordless/request-otp', [AuthController::class, 'requestPasswordlessOtp'])
+        ->middleware('throttle:passwordless-request')
+        ->name('passwordless.request-otp');
+    Route::post('/passwordless/verify-otp', [AuthController::class, 'verifyPasswordlessOtp'])
+        ->middleware('throttle:passwordless-verify')
+        ->name('passwordless.verify-otp');
 
     // auth routes
     Route::post('/register', [AuthController::class, 'store'])
-        ->middleware('throttle:10,1');
+        ->middleware('throttle:register');
 
     Route::post('/login', [AuthController::class, 'login'])
-        ->middleware('throttle:10,1')->name('login.post');
+        ->middleware('throttle:login')->name('login.post');
 });
 
 Route::middleware('auth')->group(function () {
@@ -142,6 +139,39 @@ Route::middleware('auth')->group(function () {
         Route::get('/applications', [JobApplicationController::class, 'index'])->name('applications');
         Route::post('/jobs/{job}/apply', [JobApplicationController::class, 'store'])->name('jobs.apply');
         Route::delete('/applications/{application}', [JobApplicationController::class, 'destroy'])->name('applications.destroy');
+        Route::get('/favourites', [FavouriteJobController::class, 'index'])->name('favourites');
+        Route::post('/jobs/{job}/favourite', [FavouriteJobController::class, 'store'])->name('jobs.favourite');
+        Route::delete('/favourites/{job}', [FavouriteJobController::class, 'destroy'])->name('favourites.destroy');
+
+        Route::get('/alerts', [JobAlertController::class, 'index'])->name('alerts');
+        Route::post('/alerts', [JobAlertController::class, 'store'])->name('alerts.store');
+        Route::patch('/alerts/{alert}/status', [JobAlertController::class, 'updateStatus'])->name('alerts.status');
+        Route::post('/alerts/pause-all', [JobAlertController::class, 'pauseAll'])->name('alerts.pause-all');
+        Route::delete('/alerts/{alert}', [JobAlertController::class, 'destroy'])->name('alerts.destroy');
+        Route::get('/notifications/{notification}/read', function (DatabaseNotification $notification) {
+            if (
+                $notification->notifiable_type !== User::class ||
+                (int) $notification->notifiable_id !== (int) auth()->id()
+            ) {
+                abort(403);
+            }
+
+            if (is_null($notification->read_at)) {
+                $notification->markAsRead();
+            }
+
+            $targetUrl = data_get($notification->data, 'url', route('candidate.dashboard'));
+            if (!is_string($targetUrl) || trim($targetUrl) === '') {
+                $targetUrl = route('candidate.dashboard');
+            }
+
+            return redirect()->to($targetUrl);
+        })->name('notifications.read');
+        Route::post('/notifications/read-all', function () {
+            auth()->user()->unreadNotifications->markAsRead();
+
+            return back();
+        })->name('notifications.read-all');
     });
 
     Route::middleware('role:employer')->prefix('employer')->name('employer.')->group(function () {
@@ -162,5 +192,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/jobs/{job}/close', [App\Http\Controllers\Employer\JobController::class, 'close'])->name('jobs.close');
         Route::post('/jobs/{job}/reopen', [App\Http\Controllers\Employer\JobController::class, 'reopen'])->name('jobs.reopen');
         Route::delete('/jobs/{job}', [App\Http\Controllers\Employer\JobController::class, 'destroy'])->name('jobs.destroy');
+        Route::get('/jobs/{job}/applications', [App\Http\Controllers\Employer\JobApplicationController::class, 'index'])->name('jobs.applications');
+        Route::patch('/jobs/{job}/applications/{application}/status', [App\Http\Controllers\Employer\JobApplicationController::class, 'updateStatus'])->name('jobs.applications.status');
     });
 });

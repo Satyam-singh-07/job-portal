@@ -6,9 +6,9 @@ use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class LoginRequest extends FormRequest
+class RequestPasswordlessOtpRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
         return true;
     }
@@ -17,16 +17,13 @@ class LoginRequest extends FormRequest
     {
         $this->merge([
             'email' => strtolower(trim((string) $this->input('email'))),
-            'remember' => filter_var($this->input('remember', false), FILTER_VALIDATE_BOOLEAN),
         ]);
     }
 
-    public function rules()
+    public function rules(): array
     {
         return [
             'email' => 'required|string|email:rfc|max:255',
-            'password' => 'required|string|min:6|max:255',
-            'remember' => 'sometimes|boolean',
         ];
     }
 

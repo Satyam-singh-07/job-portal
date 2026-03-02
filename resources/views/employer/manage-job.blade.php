@@ -68,6 +68,15 @@
                                 <span class="stat-value" style="color: black">{{ $draftJobsCount }}</span>
                             </div>
                         </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-info-subtle">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label" style="color: black">Job Views</span>
+                                <span class="stat-value" style="color: black">{{ $total_views ?? 0 }}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Filters and Search -->
@@ -118,9 +127,9 @@
                                                     <a href="{{ route('employer.jobs.edit', $job->id) }}" class="menu-item">
                                                         <i class="fas fa-edit"></i> Edit
                                                     </a>
-                                                    {{-- <a href="{{ route('employer.jobs.applications', $job->id) }}" class="menu-item">
+                                                    <a href="{{ route('employer.jobs.applications', $job->id) }}" class="menu-item">
                                                         <i class="fas fa-users"></i> View Applications
-                                                    </a> --}}
+                                                    </a>
                                                     @if($job->status == 'Published')
                                                         <button class="menu-item" onclick="closeJob({{ $job->id }})">
                                                             <i class="fas fa-lock"></i> Close Job
@@ -187,9 +196,9 @@
 
                                     <div class="job-card-footer">
                                         <div class="quick-actions">
-                                            {{-- <a href="{{ route('employer.jobs.applications', $job->id) }}" class="btn btn-outline-primary btn-sm">
+                                            <a href="{{ route('employer.jobs.applications', $job->id) }}" class="btn btn-outline-primary btn-sm">
                                                 <i class="fas fa-eye"></i> View Applications
-                                            </a> --}}
+                                            </a>
                                             <button class="btn btn-outline-secondary btn-sm" onclick="shareJob({{ $job->id }})">
                                                 <i class="fas fa-share"></i> Share
                                             </button>

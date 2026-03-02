@@ -4,8 +4,10 @@ namespace App\Http\Controllers\web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RequestPasswordlessOtpRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResendOtpRequest;
+use App\Http\Requests\Auth\VerifyPasswordlessOtpRequest;
 use App\Http\Requests\Auth\VerifyOtpRequest;
 use App\Http\Services\Auth\AuthService;
 use App\Http\Services\Auth\OtpService;
@@ -13,8 +15,8 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -28,8 +30,19 @@ class AuthController extends Controller
                 'message' => 'OTP sent successfully.',
                 'user_id' => $user->id,
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => collect($e->errors())->flatten()->first() ?: 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            report($e);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Unable to create account right now. Please try again.',
+            ], 500);
         }
     }
 
@@ -38,9 +51,26 @@ class AuthController extends Controller
         try {
             $response = $service->login($request);
 
-            return response()->json($response);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            if (($response['status'] ?? false) === true) {
+                $request->session()->regenerate();
+            }
+
+            $statusCode = ($response['otp_required'] ?? false) ? 403 : 200;
+
+            return response()->json($response, $statusCode);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid email or password.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Unable to login right now. Please try again.',
+            ], 500);
         }
     }
 
@@ -113,6 +143,14 @@ class AuthController extends Controller
                 'message' => 'OTP resent successfully.',
             ]);
 
+        } catch (ValidationException $e) {
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+
         } catch (\Exception $e) {
 
             return response()->json([
@@ -138,12 +176,74 @@ class AuthController extends Controller
                 'message' => 'Email verified successfully.',
             ]);
 
+        } catch (ValidationException $e) {
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+
         } catch (\Exception $e) {
 
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage(),
             ], 422);
+        }
+    }
+
+    public function requestPasswordlessOtp(
+        RequestPasswordlessOtpRequest $request,
+        OtpService $otpService
+    ) {
+        try {
+            $otpService->sendPasswordlessOtp($request->email);
+        } catch (ValidationException $e) {
+            // Keep response generic to avoid account enumeration.
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'If the account exists, an OTP has been sent.',
+        ]);
+    }
+
+    public function verifyPasswordlessOtp(
+        VerifyPasswordlessOtpRequest $request,
+        OtpService $otpService
+    ) {
+        try {
+            $result = $otpService->verifyPasswordless(
+                $request->email,
+                $request->otp,
+                (bool) $request->remember,
+            );
+
+            $request->session()->regenerate();
+
+            return response()->json([
+                'status' => true,
+                'role' => $result['role'],
+                'message' => $result['message'],
+            ]);
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first() ?: 'Invalid OTP.';
+
+            return response()->json([
+                'status' => false,
+                'message' => $message,
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Unable to verify OTP right now. Please try again.',
+            ], 500);
         }
     }
 

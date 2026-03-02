@@ -50,8 +50,18 @@
                         @endif
                     @endif
                     
-                    <button class="btn btn-outline-primary job-save" id="saveJobBtn">
-                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i> Save Job
+                    <button
+                        class="btn btn-outline-primary job-save {{ !empty($isFavorited) ? 'active' : '' }}"
+                        id="saveJobBtn"
+                        data-is-favorited="{{ !empty($isFavorited) ? '1' : '0' }}"
+                        data-save-url="{{ route('candidate.jobs.favourite', $job->id) }}"
+                        data-remove-url="{{ route('candidate.favourites.destroy', $job->id) }}"
+                    >
+                        @if(!empty($isFavorited))
+                            <i class="fa-solid fa-bookmark" aria-hidden="true"></i> Saved
+                        @else
+                            <i class="fa-regular fa-bookmark" aria-hidden="true"></i> Save Job
+                        @endif
                     </button>
                     <button class="btn btn-link job-share" id="shareJobBtn">
                         <i class="fa-solid fa-share-nodes" aria-hidden="true"></i> Share
@@ -379,18 +389,57 @@ $(document).ready(function() {
         });
     });
     $('#saveJobBtn').on('click', function() {
+        const $btn = $(this);
+
         @auth
-            $(this).toggleClass('active');
-            const isActive = $(this).hasClass('active');
-            if(isActive) {
-                $(this).html('<i class="fa-solid fa-bookmark"></i> Saved');
-                showToast('Job saved to your bookmarks.');
-            } else {
-                $(this).html('<i class="fa-regular fa-bookmark"></i> Save Job');
-                showToast('Job removed from bookmarks.');
-            }
+            @if(auth()->user()->isCandidate())
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                const isFavorited = $btn.attr('data-is-favorited') === '1';
+                const requestUrl = isFavorited ? $btn.data('remove-url') : $btn.data('save-url');
+                const requestMethod = isFavorited ? 'DELETE' : 'POST';
+                const originalHtml = $btn.html();
+
+                $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+
+                $.ajax({
+                    url: requestUrl,
+                    method: requestMethod,
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    success: function(response) {
+                        const nowFavorited = !isFavorited;
+                        $btn.attr('data-is-favorited', nowFavorited ? '1' : '0');
+                        $btn.toggleClass('active', nowFavorited);
+
+                        if (nowFavorited) {
+                            $btn.html('<i class="fa-solid fa-bookmark" aria-hidden="true"></i> Saved');
+                        } else {
+                            $btn.html('<i class="fa-regular fa-bookmark" aria-hidden="true"></i> Save Job');
+                        }
+
+                        showToast(response?.message || (nowFavorited ? 'Job saved to your favourites.' : 'Job removed from favourites.'));
+                    },
+                    error: function(xhr) {
+                        $btn.html(originalHtml);
+
+                        if (xhr.status === 401) {
+                            window.location.href = "{{ route('login') }}?redirect={{ url()->current() }}";
+                            return;
+                        }
+
+                        showToast(xhr.responseJSON?.message || 'Unable to update favourites right now.', 'error');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false);
+                    }
+                });
+            @else
+                showToast('Only candidates can save jobs.', 'error');
+            @endif
         @else
-            window.location.href = "{{ route('login') }}";
+            window.location.href = "{{ route('login') }}?redirect={{ url()->current() }}";
         @endauth
     });
 

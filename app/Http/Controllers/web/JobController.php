@@ -7,6 +7,7 @@ use App\Models\Job;
 use App\Models\JobApplication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class JobController extends Controller
 {
@@ -82,14 +83,23 @@ class JobController extends Controller
     /**
      * Display the specified job.
      */
-    public function show($slug)
+    public function show($slug, Request $request)
     {
         $job = Job::with('user')->where('slug', $slug)->where('status', 'Published')->firstOrFail();
+
+        $this->recordJobView($job->id, $request);
         
         $hasApplied = false;
+        $isFavorited = false;
+
         if (Auth::check() && Auth::user()->isCandidate()) {
             $hasApplied = JobApplication::where('user_id', Auth::id())
                 ->where('job_id', $job->id)
+                ->exists();
+
+            $isFavorited = Auth::user()
+                ->favoriteJobs()
+                ->where('jobs.id', $job->id)
                 ->exists();
         }
 
@@ -103,6 +113,28 @@ class JobController extends Controller
             ->limit(3)
             ->get();
 
-        return view('jobs.show', compact('job', 'relatedJobs', 'hasApplied'));
+        return view('jobs.show', compact('job', 'relatedJobs', 'hasApplied', 'isFavorited'));
+    }
+
+    protected function recordJobView(int $jobId, Request $request): void
+    {
+        $user = $request->user();
+        $ip = (string) $request->ip();
+        $userAgent = (string) $request->userAgent();
+
+        $viewerKey = $user
+            ? 'user:'.$user->id
+            : 'guest:'.sha1($ip.'|'.$userAgent);
+
+        DB::table('job_views')->upsert([
+            [
+                'job_id' => $jobId,
+                'user_id' => $user?->id,
+                'viewer_key' => $viewerKey,
+                'viewed_on' => now()->toDateString(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ], ['job_id', 'viewer_key', 'viewed_on'], ['updated_at']);
     }
 }

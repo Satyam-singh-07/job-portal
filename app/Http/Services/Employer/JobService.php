@@ -3,6 +3,8 @@
 namespace App\Http\Services\Employer;
 
 use App\Models\Job;
+use App\Models\JobApplication;
+use App\Models\JobView;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -79,6 +81,10 @@ class JobService
     public function getEmployerJobs(User $user, int $perPage = 10)
     {
         return $user->jobs()
+            ->withCount([
+                'applications',
+                'jobViews as views_count',
+            ])
             ->latest()
             ->paginate($perPage);
     }
@@ -100,13 +106,27 @@ class JobService
             ')
             ->first();
 
+        $totalApplications = JobApplication::whereHas('job', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->count();
+
+        $pendingReviews = JobApplication::where('status', 'Pending')
+            ->whereHas('job', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->count();
+
+        $totalViews = JobView::whereHas('job', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->count();
+
         return [
             'total' => $stats->total ?? 0,
             'active' => $stats->active ?? 0,
             'draft' => $stats->draft ?? 0,
             'closed' => $stats->closed ?? 0,
-            'total_applications' => 0, // Placeholder for when applications table exists
-            'pending_reviews' => 0,    // Placeholder
+            'total_applications' => $totalApplications,
+            'pending_reviews' => $pendingReviews,
+            'total_views' => $totalViews,
         ];
     }
 
