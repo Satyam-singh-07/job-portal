@@ -3,6 +3,7 @@
 use App\Http\Controllers\Candidate\CandidateProfileController;
 use App\Http\Controllers\Employer\CompanyProfileController;
 use App\Http\Controllers\web\AuthController;
+use App\Http\Controllers\web\JobApplicationController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -44,7 +45,6 @@ Route::get('/company/@{username}', function ($username) {
 
     return view('employers.show', compact('username'));
 })->name('company.show');
-
 
 Route::prefix('candidate')->name('candidate.')->group(function () {
 
@@ -138,6 +138,10 @@ Route::middleware('auth')->group(function () {
         Route::put('/edit-profile', [CandidateProfileController::class, 'update'])->name('edit-profile.update');
         Route::post('/edit-profile/photo', [CandidateProfileController::class, 'updatePhoto'])->name('edit-profile.photo');
         Route::post('/edit-profile/visibility', [CandidateProfileController::class, 'updateVisibility'])->name('edit-profile.visibility');
+
+        Route::get('/applications', [JobApplicationController::class, 'index'])->name('applications');
+        Route::post('/jobs/{job}/apply', [JobApplicationController::class, 'store'])->name('jobs.apply');
+        Route::delete('/applications/{application}', [JobApplicationController::class, 'destroy'])->name('applications.destroy');
     });
 
     Route::middleware('role:employer')->prefix('employer')->name('employer.')->group(function () {

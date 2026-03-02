@@ -1,15 +1,13 @@
- @extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'My Job Applications')
 
 @section('content')
 
-
 <section class="dashboard-section">
   <div class="container">
     <div class="dashboard-layout">
      
-
         @include('candidates.partials.sidebar')
 
       <div class="dashboard-main">
@@ -19,107 +17,74 @@
             <p>Stay on top of every pipeline stage, feedback, and recruiter follow-up.</p>
           </div>
           <div class="d-flex flex-wrap gap-2">
-            <a href="#." class="btn btn-outline-primary"><i class="fa-solid fa-filter" aria-hidden="true"></i> Filters</a>
-            <a href="#." class="btn btn-primary"><i class="fa-solid fa-arrow-rotate-right" aria-hidden="true"></i> Sync updates</a>
+            {{-- <a href="#." class="btn btn-outline-primary"><i class="fa-solid fa-filter" aria-hidden="true"></i> Filters</a> --}}
+            <button onclick="location.reload()" class="btn btn-primary"><i class="fa-solid fa-arrow-rotate-right" aria-hidden="true"></i> Sync updates</button>
           </div>
         </div>
 
-        <div class="row row-cols-1 row-cols-lg-2 g-4 application-grid">
-          <div class="col">
-            <div class="application-card">
-              <div class="application-header">
-                <span class="status-chip interview">Interview</span>
-              </div>
-              <div class="application-title">
-                <h4><a href="job-detail.html">Lead Product Designer</a></h4>
-                <div class="application-location"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Remote · North America</div>
-                <p>Skyline Digital · Design Systems team</p>
-              </div>
-              <div class="application-pill"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Loop scheduled for Apr 20</div>
-              <div class="application-footer">
-                <div class="application-meta">
-                  <div class="meta-avatar"><img src="images/employers/emplogo1.jpg" alt="Skyline Digital"></div>
-                  <div>
-                    <span class="meta-label">Applied 12 days ago</span>
-                    <span class="meta-value">via Jobs Portal</span>
+        <div class="row row-cols-1 row-cols-lg-2 g-4 application-grid" id="applicationsContainer">
+          @forelse($applications as $application)
+            <div class="col" data-application-id="{{ $application->id }}">
+              <div class="application-card">
+                <div class="application-header">
+                  <span class="status-chip {{ strtolower($application->status) }}">
+                    {{ $application->status }}
+                  </span>
+                </div>
+                <div class="application-title">
+                  <h4><a href="{{ route('jobs.show', $application->job->slug) }}">{{ $application->job->title }}</a></h4>
+                  <div class="application-location">
+                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i> 
+                    {{ $application->job->location }}
+                  </div>
+                  <p>{{ $application->job->user->company_name }} · {{ $application->job->department ?? 'General' }}</p>
+                </div>
+                
+                <div class="application-pill">
+                  <i class="fa-solid fa-clock" aria-hidden="true"></i> 
+                  Last update: {{ $application->updated_at->diffForHumans() }}
+                </div>
+
+                <div class="application-footer">
+                  <div class="application-meta">
+                    <div class="meta-avatar">
+                      <img src="{{ $application->job->user->logo_url }}" alt="{{ $application->job->user->company_name }}">
+                    </div>
+                    <div>
+                      <span class="meta-label">Applied {{ $application->created_at->diffForHumans() }}</span>
+                      <span class="meta-value">via Jobs Portal</span>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2">
+                    @if(in_array($application->status, ['Pending', 'Reviewed']))
+                      <button onclick="withdrawApplication({{ $application->id }})" class="btn btn-outline-danger btn-sm rounded-pill">
+                        Withdraw
+                      </button>
+                    @endif
+                    <a href="{{ route('jobs.show', $application->job->slug) }}" class="btn btn-outline-primary btn-sm rounded-pill">View Job</a>
                   </div>
                 </div>
-                <a href="#." class="btn btn-outline-primary btn-sm rounded-pill">View thread</a>
               </div>
             </div>
-          </div>
-          <div class="col">
-            <div class="application-card">
-              <div class="application-header">
-                <span class="status-chip review">Review</span>
-              </div>
-              <div class="application-title">
-                <h4><a href="job-detail.html">Senior Frontend Engineer</a></h4>
-                <div class="application-location"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Berlin, Germany</div>
-                <p>Bright Labs · Platform squad</p>
-              </div>
-              <div class="application-pill"><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i> Awaiting recruiter response</div>
-              <div class="application-footer">
-                <div class="application-meta">
-                  <div class="meta-avatar"><img src="images/employers/emplogo7.jpg" alt="Bright Labs"></div>
-                  <div>
-                    <span class="meta-label">Applied 5 days ago</span>
-                    <span class="meta-value">Referral · Maya</span>
-                  </div>
-                </div>
-                <a href="#." class="btn btn-outline-primary btn-sm rounded-pill">Send nudge</a>
+          @empty
+            <div class="col-12 w-100">
+              <div class="empty-state text-center py-5 bg-white rounded-4 shadow-sm">
+                <i class="fa-solid fa-briefcase fa-3x mb-3 text-muted"></i>
+                <h3>No Applications Yet</h3>
+                <p>You haven't applied for any jobs. Start exploring opportunities today!</p>
+                <a href="{{ route('jobs.index') }}" class="btn btn-primary mt-2">Browse Jobs</a>
               </div>
             </div>
-          </div>
-          <div class="col">
-            <div class="application-card">
-              <div class="application-header">
-                <span class="status-chip offer">Offer</span>
-              </div>
-              <div class="application-title">
-                <h4><a href="job-detail.html">Product Design Manager</a></h4>
-                <div class="application-location"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Toronto, Canada</div>
-                <p>Northwind Commerce · Growth org</p>
-              </div>
-              <div class="application-pill"><i class="fa-solid fa-badge-dollar" aria-hidden="true"></i> Offer received · reviewing</div>
-              <div class="application-footer">
-                <div class="application-meta">
-                  <div class="meta-avatar"><img src="images/employers/emplogo4.jpg" alt="Northwind"></div>
-                  <div>
-                    <span class="meta-label">Applied 22 days ago</span>
-                    <span class="meta-value">Recruiter: Alex Chen</span>
-                  </div>
-                </div>
-                <a href="#." class="btn btn-outline-primary btn-sm rounded-pill">Open offer</a>
-              </div>
-            </div>
-          </div>
-          <div class="col">
-            <div class="application-card">
-              <div class="application-header">
-                <span class="status-chip archived">Archived</span>
-              </div>
-              <div class="application-title">
-                <h4><a href="job-detail.html">Staff UX Researcher</a></h4>
-                <div class="application-location"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Austin, USA</div>
-                <p>CloudSync · Platform strategy</p>
-              </div>
-              <div class="application-pill"><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> Closed · keep warm</div>
-              <div class="application-footer">
-                <div class="application-meta">
-                  <div class="meta-avatar"><img src="images/employers/emplogo9.jpg" alt="CloudSync"></div>
-                  <div>
-                    <span class="meta-label">Applied Feb 03</span>
-                    <span class="meta-value">Feedback saved</span>
-                  </div>
-                </div>
-                <a href="#." class="btn btn-outline-secondary btn-sm rounded-pill">View notes</a>
-              </div>
-            </div>
-          </div>
+          @endforelse
         </div>
 
-        <div class="list-card mt-4">
+        @if($applications->hasPages())
+          <div class="mt-4">
+            {{ $applications->links() }}
+          </div>
+        @endif
+
+        {{-- <div class="list-card mt-4">
           <h3>Next Steps</h3>
           <ul>
             <li>
@@ -129,19 +94,49 @@
               </div>
               <a href="#." class="btn btn-outline-primary btn-sm rounded-3">Open prep kit</a>
             </li>
-            <li>
-              <div>
-                <strong>Follow up with Bright Labs</strong>
-                <p class="mb-0 text-muted">Send quick note if no update by Apr 18.</p>
-              </div>
-              <a href="#." class="btn btn-outline-secondary btn-sm rounded-3">Send reminder</a>
-            </li>
           </ul>
-        </div>
+        </div> --}}
       </div>
     </div>
   </div>
 </section>
 
+@endsection
 
+@section('scripts')
+<script>
+function withdrawApplication(applicationId) {
+    if (confirm('Are you sure you want to withdraw this application? This action cannot be undone.')) {
+        $.ajax({
+            url: `/candidate/applications/${applicationId}`,
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message);
+                    $(`[data-application-id="${applicationId}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                        if ($('#applicationsContainer').children().length === 0) {
+                            location.reload();
+                        }
+                    });
+                }
+            },
+            error: function(xhr) {
+                showToast(xhr.responseJSON?.message || 'Something went wrong.', 'error');
+            }
+        });
+    }
+}
+
+const showToast = (message, type = 'success') => {
+    const $toast = $('#liveToast');
+    $toast.removeClass('bg-success bg-danger').addClass(`bg-${type === 'success' ? 'success' : 'danger'}`);
+    $toast.find('.toast-body').text(message);
+    const toast = new bootstrap.Toast($toast[0]);
+    toast.show();
+};
+</script>
 @endsection

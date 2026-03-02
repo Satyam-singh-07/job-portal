@@ -4,7 +4,9 @@ namespace App\Http\Controllers\web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Job;
+use App\Models\JobApplication;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class JobController extends Controller
 {
@@ -82,7 +84,25 @@ class JobController extends Controller
      */
     public function show($slug)
     {
-        $job = Job::with('user')->where('slug', $slug)->firstOrFail();
-        return view('jobs.show', compact('job'));
+        $job = Job::with('user')->where('slug', $slug)->where('status', 'Published')->firstOrFail();
+        
+        $hasApplied = false;
+        if (Auth::check() && Auth::user()->isCandidate()) {
+            $hasApplied = JobApplication::where('user_id', Auth::id())
+                ->where('job_id', $job->id)
+                ->exists();
+        }
+
+        $relatedJobs = Job::with('user')
+            ->where('status', 'Published')
+            ->where('id', '!=', $job->id)
+            ->where(function($q) use ($job) {
+                $q->where('department', $job->department)
+                  ->orWhere('location', 'like', "%{$job->location}%");
+            })
+            ->limit(3)
+            ->get();
+
+        return view('jobs.show', compact('job', 'relatedJobs', 'hasApplied'));
     }
 }
