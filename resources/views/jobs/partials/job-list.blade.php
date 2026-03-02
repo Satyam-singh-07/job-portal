@@ -26,8 +26,15 @@
                 </div>
                 <div class="job-list-actions">
                     <a href="{{ route('jobs.show', $job->slug) }}" class="btn btn-outline-primary btn-sm">View Details</a>
-                    <button class="bookmark" aria-label="Save job">
-                        <i class="fa-regular fa-bookmark" aria-hidden="true"></i>
+                    <button
+                        type="button"
+                        class="bookmark js-save-job {{ !empty($job->is_favorited) ? 'active' : '' }}"
+                        aria-label="{{ !empty($job->is_favorited) ? 'Remove saved job' : 'Save job' }}"
+                        data-is-favorited="{{ !empty($job->is_favorited) ? '1' : '0' }}"
+                        data-save-url="{{ route('candidate.jobs.favourite', $job->id) }}"
+                        data-remove-url="{{ route('candidate.favourites.destroy', $job->id) }}"
+                    >
+                        <i class="{{ !empty($job->is_favorited) ? 'fa-solid' : 'fa-regular' }} fa-bookmark" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>

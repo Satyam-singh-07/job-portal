@@ -32,7 +32,7 @@ Route::get('/', function () {
 
 use App\Http\Controllers\web\JobController;
 
-Route::get('/jobs', [JobController::class, 'index'])->name('jobs.index');
+Route::get('/jobs', [JobController::class, 'index'])->middleware('throttle:jobs-search')->name('jobs.index');
 Route::get('/jobs/{slug}', [JobController::class, 'show'])->name('jobs.show');
 
 Route::get('/employers', function () {

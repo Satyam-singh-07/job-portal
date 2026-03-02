@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\web;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Web\JobIndexRequest;
 use App\Models\Job;
 use App\Models\JobApplication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class JobController extends Controller
@@ -14,70 +16,127 @@ class JobController extends Controller
     /**
      * Display a listing of the jobs.
      */
-    public function index(Request $request)
+    public function index(JobIndexRequest $request)
     {
-        $query = Job::with('user')->where('status', 'Published');
+        $filters = $request->normalized();
 
-        // Search by keyword, company, or title
-        if ($request->has('search') && !empty($request->search)) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
+        $query = Job::query()
+            ->select([
+                'id',
+                'user_id',
+                'title',
+                'slug',
+                'department',
+                'location',
+                'employment_type',
+                'salary_range',
+                'summary',
+                'created_at',
+            ])
+            ->with('user:id,company_name,logo')
+            ->where('status', 'Published');
+
+        if (Auth::check() && Auth::user()->isCandidate()) {
+            $query->withCount([
+                'favoritedBy as is_favorited' => function ($favoriteQuery) {
+                    $favoriteQuery->where('users.id', Auth::id());
+                },
+            ]);
+        }
+
+        if ($filters['search']) {
+            $search = addcslashes($filters['search'], '\\%_');
+
+            $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('department', 'like', "%{$search}%")
-                  ->orWhereHas('user', function($userQuery) use ($search) {
-                      $userQuery->where('company_name', 'like', "%{$search}%");
-                  });
+                    ->orWhere('department', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('company_name', 'like', "%{$search}%");
+                    });
             });
         }
 
-        // Filter by location
-        if ($request->has('location') && !empty($request->location) && $request->location !== 'Location') {
-            $query->where('location', 'like', "%{$request->location}%");
+        if ($filters['location']) {
+            $location = addcslashes($filters['location'], '\\%_');
+            $query->where('location', 'like', "%{$location}%");
         }
 
-        // Filter by category (department)
-        if ($request->has('category') && !empty($request->category) && $request->category !== 'Category') {
-            $query->where('department', 'like', "%{$request->category}%");
+        if ($filters['category']) {
+            $category = addcslashes($filters['category'], '\\%_');
+            $query->where('department', 'like', "%{$category}%");
         }
 
-        // Filter by Job Type (employment_type)
-        if ($request->has('types') && is_array($request->types)) {
-            $query->whereIn('employment_type', $request->types);
+        if ($filters['types'] !== []) {
+            $query->whereIn('employment_type', $filters['types']);
         }
 
-        // Filter by Experience
-        if ($request->has('experience') && is_array($request->experience)) {
-            $query->whereIn('experience', $request->experience);
+        if ($filters['experience'] !== []) {
+            $query->whereIn('experience', $filters['experience']);
         }
 
-        // Sorting
-        $sort = $request->get('sort', 'recent');
-        switch ($sort) {
-            case 'recent':
-                $query->latest();
-                break;
+        switch ($filters['sort']) {
             case 'salary_high':
-                $query->orderBy('salary_range', 'desc'); // Note: salary_range is string, might need improvement
+                $query->orderBy('salary_range', 'desc')->latest('id');
                 break;
             case 'salary_low':
-                $query->orderBy('salary_range', 'asc');
+                $query->orderBy('salary_range', 'asc')->latest('id');
                 break;
+            case 'recent':
             default:
                 $query->latest();
                 break;
         }
 
-        $jobs = $query->paginate(10)->appends($request->all());
+        $jobs = $query
+            ->paginate(10)
+            ->appends(array_filter($filters, static fn (mixed $value): bool => $value !== null && $value !== []));
+
+        $firstItem = $jobs->firstItem() ?? 0;
+        $lastItem = $jobs->lastItem() ?? 0;
+        $countText = "Showing {$firstItem} - {$lastItem} of {$jobs->total()} results";
 
         if ($request->ajax()) {
             return response()->json([
                 'html' => view('jobs.partials.job-list', compact('jobs'))->render(),
-                'count_text' => "Showing " . $jobs->firstItem() . " - " . $jobs->lastItem() . " of " . $jobs->total() . " results",
-                'total_found' => $jobs->total() . " Jobs Found"
+                'count_text' => $countText,
+                'total_found' => $jobs->total() . ' Jobs Found',
             ]);
         }
 
-        return view('jobs.index', compact('jobs'));
+        $filterOptions = Cache::remember(
+            'jobs:filter-options:v1',
+            now()->addMinutes(10),
+            function (): array {
+                $baseQuery = Job::query()->where('status', 'Published');
+
+                return [
+                    'locations' => (clone $baseQuery)
+                        ->whereNotNull('location')
+                        ->distinct()
+                        ->orderBy('location')
+                        ->pluck('location')
+                        ->values()
+                        ->all(),
+                    'categories' => (clone $baseQuery)
+                        ->whereNotNull('department')
+                        ->where('department', '<>', '')
+                        ->distinct()
+                        ->orderBy('department')
+                        ->pluck('department')
+                        ->values()
+                        ->all(),
+                ];
+            }
+        );
+
+        return view('jobs.index', [
+            'jobs' => $jobs,
+            'filters' => $filters,
+            'jobTypes' => JobIndexRequest::jobTypes(),
+            'experienceLevels' => JobIndexRequest::experienceLevels(),
+            'filterOptions' => $filterOptions,
+            'countText' => $countText,
+        ]);
     }
 
     /**
@@ -125,6 +184,10 @@ class JobController extends Controller
         $viewerKey = $user
             ? 'user:'.$user->id
             : 'guest:'.sha1($ip.'|'.$userAgent);
+
+        if (! Cache::add("jobs:view-lock:{$jobId}:{$viewerKey}", true, now()->addMinutes(15))) {
+            return;
+        }
 
         DB::table('job_views')->upsert([
             [

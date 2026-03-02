@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class Job extends Model
@@ -45,6 +46,15 @@ class Job extends Model
         static::creating(function ($job) {
             $job->slug = Str::slug($job->title) . '-' . Str::random(5);
         });
+
+        $flushFilterCache = static function (): void {
+            Cache::forget('jobs:filter-options:v1');
+        };
+
+        static::created($flushFilterCache);
+        static::updated($flushFilterCache);
+        static::deleted($flushFilterCache);
+        static::restored($flushFilterCache);
     }
 
     public function user()

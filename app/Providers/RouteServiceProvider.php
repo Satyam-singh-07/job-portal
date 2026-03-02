@@ -82,6 +82,14 @@ class RouteServiceProvider extends ServiceProvider
             ];
         });
 
+        RateLimiter::for('jobs-search', function (Request $request) {
+            if ($request->user()) {
+                return Limit::perMinute(240)->by('jobs-user:'.$request->user()->id);
+            }
+
+            return Limit::perMinute(120)->by('jobs-ip:'.$request->ip());
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')
