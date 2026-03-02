@@ -22,9 +22,10 @@
                         <li class="@if (request()->routeIs('employer.manage-jobs')) active @endif">
                             <a href="{{ route('employer.manage-jobs') }}"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
                         </li>
-                        {{-- <li>
-                            <a href="#"><i class="fa-solid fa-layer-group"></i> CV Search Packages</a>
+                         <li>
+                            <a href="#"><i class="fa-solid fa-layer-group"></i> CV Search</a>
                         </li>
+                        {{--
                         <li>
                             <a href="#"><i class="fa-solid fa-credit-card"></i> Payment History</a>
                         </li>

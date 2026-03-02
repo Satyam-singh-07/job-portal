@@ -74,6 +74,11 @@ class User extends Authenticatable
         return $this->hasMany(Job::class);
     }
 
+    public function applications()
+    {
+        return $this->hasMany(JobApplication::class);
+    }
+
     public static function findByUsername($username)
     {
         return self::where('username', $username)->first();

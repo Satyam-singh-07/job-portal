@@ -29,27 +29,13 @@
                     </li>
 
                     <!-- Jobs -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {{ request()->routeIs('jobs.*') ? 'active' : '' }}"
-                            href="#" data-bs-toggle="dropdown">
+                    <li class="nav-item ">
+                        <a class="nav-link  {{ request()->routeIs('jobs.*') ? 'active' : '' }}"
+                            href="{{ route('jobs.index') }}" >
                             Jobs
                         </a>
 
-                        <ul class="dropdown-menu dropdown-menu-lg">
-                            <li>
-                                <a class="dropdown-item {{ request()->routeIs('jobs.index') ? 'active' : '' }}"
-                                    href="{{ route('jobs.index') }}">
-                                    Jobs List
-                                </a>
-                            </li>
-
-                            {{-- <li>
-                                <a class="dropdown-item {{ request()->routeIs('jobs.show') ? 'active' : '' }}"
-                                    href="{{ route('jobs.show') }}">
-                                    Job Detail
-                                </a>
-                            </li> --}}
-                        </ul>
+                        
                     </li>
 
                     <!-- Employer -->
