@@ -1,6 +1,70 @@
 @extends('layouts.app')
 
-@section('title', 'Job Listing')
+@php
+    $activeFilterCount = collect([
+        $filters['search'] ?? null,
+        $filters['location'] ?? null,
+        $filters['category'] ?? null,
+    ])->filter()->count() + count($filters['types'] ?? []) + count($filters['experience'] ?? []);
+
+    $hasQuery = request()->query() !== [];
+    $isFiltered = $activeFilterCount > 0;
+    $pageTitle = $isFiltered ? 'Filtered Jobs' : 'Job Listings';
+    $metaDescription = $isFiltered
+        ? 'Explore filtered job openings by keyword, location, category, and experience. Find the best-fit role and apply quickly.'
+        : 'Browse the latest verified job openings by location, category, and experience level. Apply online in minutes.';
+@endphp
+
+@section('title', $pageTitle.' | '.config('app.name', 'Job Portal'))
+@section('meta_description', $metaDescription)
+@section('canonical_url', route('jobs.index'))
+@section('meta_robots', $hasQuery ? 'noindex,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1' : 'index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1')
+@section('og_title', $pageTitle.' | '.config('app.name', 'Job Portal'))
+@section('og_description', $metaDescription)
+@section('og_url', route('jobs.index'))
+
+@section('head')
+    @if($jobs->previousPageUrl())
+        <link rel="prev" href="{{ $jobs->previousPageUrl() }}">
+    @endif
+    @if($jobs->nextPageUrl())
+        <link rel="next" href="{{ $jobs->nextPageUrl() }}">
+    @endif
+@endsection
+
+@push('structured_data')
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'WebPage',
+    'name' => $pageTitle,
+    'url' => route('jobs.index'),
+    'description' => $metaDescription,
+    'isPartOf' => [
+        '@type' => 'WebSite',
+        'name' => config('app.name', 'Job Portal'),
+        'url' => url('/'),
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'ItemList',
+    'name' => 'Job Listings',
+    'itemListOrder' => 'https://schema.org/ItemListUnordered',
+    'numberOfItems' => $jobs->count(),
+    'itemListElement' => $jobs->getCollection()->values()->map(function ($job, $index) {
+        return [
+            '@type' => 'ListItem',
+            'position' => $index + 1,
+            'url' => route('jobs.show', ['slug' => $job->slug]),
+            'name' => $job->title,
+        ];
+    })->all(),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@endpush
 
 @section('content')
 

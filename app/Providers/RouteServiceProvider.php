@@ -90,6 +90,15 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(120)->by('jobs-ip:'.$request->ip());
         });
 
+        RateLimiter::for('admin-login', function (Request $request) {
+            $email = strtolower((string) $request->input('email'));
+
+            return [
+                Limit::perMinute(12)->by('admin-login-ip:'.$request->ip()),
+                Limit::perMinute(6)->by('admin-login-email:'.sha1($email).'|'.$request->ip()),
+            ];
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

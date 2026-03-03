@@ -14,6 +14,9 @@
                         Share role details, requirements, and perks so the right
                         candidates can find you faster.
                     </p>
+                    <p class="mb-0 mt-2">
+                        <strong>Remaining posting credits:</strong> {{ number_format((int) (auth()->user()->job_posting_balance ?? 0)) }}
+                    </p>
                 </div>
                 <a href="{{ route('employer.dashboard') }}" class="btn btn-outline-primary">Back to Dashboard</a>
             </div>

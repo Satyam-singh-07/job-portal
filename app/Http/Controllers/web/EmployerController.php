@@ -23,6 +23,14 @@ class EmployerController extends Controller
             abort(404, 'Company not found');
         }
 
+        $isFollowing = false;
+        if (auth()->check() && auth()->user()->isCandidate()) {
+            $isFollowing = auth()->user()
+                ->followingEmployers()
+                ->where('employer_user_id', $employer->id)
+                ->exists();
+        }
+
         $openJobs = Job::where('user_id', $employer->id)
             ->where('status', 'Published')
             ->withCount([
@@ -36,10 +44,14 @@ class EmployerController extends Controller
             $query->where('user_id', $employer->id);
         })->count();
 
+        $followersCount = $employer->followers()->count();
+
         return view('employers.show', [
             'employer' => $employer,
             'openJobs' => $openJobs,
             'totalApplicants' => $totalApplicants,
+            'followersCount' => $followersCount,
+            'isFollowing' => $isFollowing,
         ]);
     }
 }

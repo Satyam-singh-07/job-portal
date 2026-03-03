@@ -27,7 +27,10 @@ class JobApplicationController extends Controller
         $user = Auth::user();
         $applications = $this->applicationService->getCandidateApplications($user);
 
-        return view('candidates.applications', compact('applications'));
+        return view('candidates.applications', [
+            'applications' => $applications,
+            'applicationBalance' => (int) ($user->job_application_balance ?? 0),
+        ]);
     }
 
     /**

@@ -3,14 +3,22 @@
 namespace App\Http\Controllers\Employer;
 
 use App\Http\Controllers\Controller;
+use App\Http\Services\AI\JobMatchService;
 use App\Models\Job;
 use App\Models\JobApplication;
+use App\Models\ResumeView;
 use App\Notifications\ApplicationStatusUpdatedNotification;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class JobApplicationController extends Controller
 {
+    public function __construct(protected JobMatchService $jobMatchService)
+    {
+    }
+
     protected array $allowedStatuses = [
         'Pending',
         'Reviewed',
@@ -29,6 +37,7 @@ class JobApplicationController extends Controller
 
         $applicationsQuery = $job->applications()
             ->with(['user.candidateProfile'])
+            ->withCount('resumeViews')
             ->latest();
 
         if ($status !== '' && in_array($status, $this->allowedStatuses, true)) {
@@ -44,7 +53,39 @@ class JobApplicationController extends Controller
             });
         }
 
-        $applications = $applicationsQuery->paginate(12)->withQueryString();
+        $applicationsCollection = $applicationsQuery->get();
+
+        $applicationsWithScores = $applicationsCollection->map(function (JobApplication $application) use ($job): JobApplication {
+            $candidate = $application->user;
+
+            if (! $candidate) {
+                $application->setAttribute('ai_match_score', 0);
+                $application->setAttribute('ai_match_label', 'Low');
+                $application->setAttribute('ai_match_highlights', []);
+                return $application;
+            }
+
+            $result = $this->jobMatchService->score($candidate, $job);
+            $application->setAttribute('ai_match_score', (int) $result['score']);
+            $application->setAttribute('ai_match_label', (string) $result['label']);
+            $application->setAttribute('ai_match_highlights', (array) $result['highlights']);
+
+            return $application;
+        })->sortByDesc('ai_match_score')->values();
+
+        $perPage = 12;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $items = $applicationsWithScores->slice(($page - 1) * $perPage, $perPage)->values();
+        $applications = new LengthAwarePaginator(
+            $items,
+            $applicationsWithScores->count(),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
 
         $statusStats = $job->applications()
             ->selectRaw('status, count(*) as total')
@@ -59,7 +100,33 @@ class JobApplicationController extends Controller
             'allowedStatuses' => $this->allowedStatuses,
             'statusStats' => $statusStats,
             'totalApplications' => (int) $job->applications()->count(),
+            'topMatchScore' => (int) ($applicationsWithScores->first()?->ai_match_score ?? 0),
         ]);
+    }
+
+    public function viewResume(Job $job, JobApplication $application)
+    {
+        $this->authorizeOwner($job);
+
+        if ($application->job_id !== $job->id) {
+            abort(404);
+        }
+
+        $application->loadMissing(['user.candidateProfile']);
+
+        $resumePath = $application->resume_path ?: $application->user?->candidateProfile?->resume;
+        if (! $resumePath) {
+            return back()->with('error', 'Resume not available for this application.');
+        }
+
+        ResumeView::create([
+            'job_application_id' => $application->id,
+            'candidate_user_id' => (int) $application->user_id,
+            'employer_user_id' => (int) auth()->id(),
+            'viewed_at' => now(),
+        ]);
+
+        return redirect()->away(Storage::url($resumePath));
     }
 
     public function updateStatus(Job $job, JobApplication $application, Request $request)

@@ -31,12 +31,14 @@ class Job extends Model
         'external_apply_link',
         'allow_quick_apply',
         'status',
+        'posting_credit_consumed',
     ];
 
     protected $casts = [
         'visa_sponsorship' => 'boolean',
         'allow_quick_apply' => 'boolean',
         'open_roles' => 'integer',
+        'posting_credit_consumed' => 'boolean',
     ];
 
     protected static function boot()

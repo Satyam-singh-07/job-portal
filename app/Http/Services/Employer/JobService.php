@@ -8,6 +8,7 @@ use App\Models\JobView;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class JobService
 {
@@ -29,6 +30,13 @@ class JobService
 
                 // Set default status if not provided
                 $data['status'] = $data['status'] ?? 'Published';
+                $shouldConsumePostingCredit = $data['status'] === 'Published';
+
+                if ($shouldConsumePostingCredit) {
+                    $this->consumeEmployerPostingCredit((int) $user->id);
+                }
+
+                $data['posting_credit_consumed'] = $shouldConsumePostingCredit;
 
                 return $user->jobs()->create($data);
             });
@@ -57,6 +65,12 @@ class JobService
                 // Ensure boolean fields are set (since checkboxes might not be in the request)
                 $data['visa_sponsorship'] = isset($data['visa_sponsorship']) ? (bool) $data['visa_sponsorship'] : false;
                 $data['allow_quick_apply'] = isset($data['allow_quick_apply']) ? (bool) $data['allow_quick_apply'] : false;
+
+                $publishingFirstTime = ($data['status'] ?? $job->status) === 'Published' && ! (bool) $job->posting_credit_consumed;
+                if ($publishingFirstTime) {
+                    $this->consumeEmployerPostingCredit((int) $job->user_id);
+                    $data['posting_credit_consumed'] = true;
+                }
 
                 $job->update($data);
                 return $job;
@@ -139,7 +153,16 @@ class JobService
      */
     public function updateStatus(Job $job, string $status): bool
     {
-        return $job->update(['status' => $status]);
+        return DB::transaction(function () use ($job, $status): bool {
+            if ($status === 'Published' && ! (bool) $job->posting_credit_consumed) {
+                $this->consumeEmployerPostingCredit((int) $job->user_id);
+            }
+
+            return $job->update([
+                'status' => $status,
+                'posting_credit_consumed' => (bool) $job->posting_credit_consumed || $status === 'Published',
+            ]);
+        });
     }
 
     /**
@@ -151,5 +174,19 @@ class JobService
     public function deleteJob(Job $job): bool
     {
         return $job->delete();
+    }
+
+    protected function consumeEmployerPostingCredit(int $userId): void
+    {
+        $affected = User::query()
+            ->whereKey($userId)
+            ->where('job_posting_balance', '>', 0)
+            ->decrement('job_posting_balance');
+
+        if ($affected === 0) {
+            throw ValidationException::withMessages([
+                'balance' => ['No job posting balance left. Ask admin to add more posting credits.'],
+            ]);
+        }
     }
 }

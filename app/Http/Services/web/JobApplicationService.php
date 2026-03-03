@@ -57,6 +57,8 @@ class JobApplicationService
                 }
 
                 if ($existingApplication && $existingApplication->trashed()) {
+                    $this->consumeCandidateApplicationCredit((int) $user->id);
+
                     $existingApplication->restore();
                     $existingApplication->update([
                         'cover_letter' => $data['cover_letter'] ?? null,
@@ -66,6 +68,8 @@ class JobApplicationService
 
                     return $existingApplication->fresh();
                 }
+
+                $this->consumeCandidateApplicationCredit((int) $user->id);
 
                 return JobApplication::create([
                     'job_id' => $job->id,
@@ -167,5 +171,19 @@ class JobApplicationService
         return $sqlState === '23000'
             && (int) $driverCode === 1062
             && str_contains($message, 'job_applications_job_id_user_id_unique');
+    }
+
+    protected function consumeCandidateApplicationCredit(int $userId): void
+    {
+        $affected = User::query()
+            ->whereKey($userId)
+            ->where('job_application_balance', '>', 0)
+            ->decrement('job_application_balance');
+
+        if ($affected === 0) {
+            throw ValidationException::withMessages([
+                'application' => ['No job application balance left. Contact admin or upgrade your package.'],
+            ]);
+        }
     }
 }

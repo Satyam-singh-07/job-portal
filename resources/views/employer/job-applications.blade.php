@@ -53,11 +53,18 @@
                             <span class="stat-value" style="color: black">{{ $statusStats['Accepted'] ?? 0 }}</span>
                         </div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-success-subtle"><i class="fas fa-robot"></i></div>
+                        <div class="stat-content">
+                            <span class="stat-label" style="color: black">Top AI Match</span>
+                            <span class="stat-value" style="color: black">{{ (int) ($topMatchScore ?? 0) }}%</span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="jobs-filters-panel">
                     <form method="GET" class="filter-header">
-                        <h3>Applicant List</h3>
+                        <h3>Applicant List (AI top match first)</h3>
                         <div class="filter-actions">
                             <select class="filter-select" name="status" onchange="this.form.submit()">
                                 <option value="">All Statuses</option>
@@ -80,7 +87,6 @@
                             $candidate = $application->user;
                             $profile = $candidate?->candidateProfile;
                             $resumePath = $application->resume_path ?: $profile?->resume;
-                            $resumeUrl = $resumePath ? \Illuminate\Support\Facades\Storage::url($resumePath) : null;
                         @endphp
 
                         <div class="job-management-card" data-application-id="{{ $application->id }}">
@@ -93,6 +99,13 @@
                                 <div class="job-status-actions">
                                     <span class="job-status status-{{ strtolower($application->status) }} application-status-chip" data-status-chip>
                                         {{ $application->status }}
+                                    </span>
+                                    <span
+                                        class="job-status"
+                                        style="background: {{ (int) $application->ai_match_score >= 75 ? '#d1e7dd' : ((int) $application->ai_match_score >= 45 ? '#fff3cd' : '#f8d7da') }}; color: #111;"
+                                        title="{{ implode(', ', $application->ai_match_highlights ?? []) }}"
+                                    >
+                                        AI {{ (int) $application->ai_match_score }}%
                                     </span>
                                     <select class="filter-select application-status-select" data-status-select data-url="{{ route('employer.jobs.applications.status', [$job->id, $application->id]) }}">
                                         @foreach($allowedStatuses as $status)
@@ -109,6 +122,7 @@
                                     <div class="meta-item"><i class="fas fa-map-marker-alt"></i><span>{{ $profile?->location ?: 'Not provided' }}</span></div>
                                     <div class="meta-item"><i class="fas fa-briefcase"></i><span>{{ $profile?->title ?: 'Not specified' }}</span></div>
                                     <div class="meta-item"><i class="fas fa-calendar"></i><span>Applied {{ $application->created_at->diffForHumans() }}</span></div>
+                                    <div class="meta-item"><i class="fas fa-eye"></i><span>Resume views {{ $application->resume_views_count ?? 0 }}</span></div>
                                 </div>
 
                                 @if($application->cover_letter)
@@ -121,8 +135,8 @@
 
                             <div class="job-card-footer">
                                 <div class="quick-actions d-flex gap-2 flex-wrap">
-                                    @if($resumeUrl)
-                                        <a href="{{ $resumeUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">
+                                    @if($resumePath)
+                                        <a href="{{ route('employer.jobs.applications.resume', [$job->id, $application->id]) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">
                                             <i class="fas fa-file-download"></i> View Resume
                                         </a>
                                     @else

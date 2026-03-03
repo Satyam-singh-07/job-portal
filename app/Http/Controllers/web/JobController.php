@@ -4,6 +4,7 @@ namespace App\Http\Controllers\web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Web\JobIndexRequest;
+use App\Http\Services\AI\JobMatchService;
 use App\Models\Job;
 use App\Models\JobApplication;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class JobController extends Controller
 {
+    public function __construct(protected JobMatchService $jobMatchService)
+    {
+    }
+
     /**
      * Display a listing of the jobs.
      */
@@ -91,6 +96,21 @@ class JobController extends Controller
             ->paginate(10)
             ->appends(array_filter($filters, static fn (mixed $value): bool => $value !== null && $value !== []));
 
+        if (Auth::check() && Auth::user()->isCandidate()) {
+            $candidate = Auth::user()->loadMissing('candidateProfile');
+
+            $jobs->setCollection(
+                $jobs->getCollection()->map(function (Job $job) use ($candidate): Job {
+                    $result = $this->jobMatchService->score($candidate, $job);
+                    $job->setAttribute('ai_match_score', (int) $result['score']);
+                    $job->setAttribute('ai_match_label', (string) $result['label']);
+                    $job->setAttribute('ai_match_highlights', (array) $result['highlights']);
+
+                    return $job;
+                })
+            );
+        }
+
         $firstItem = $jobs->firstItem() ?? 0;
         $lastItem = $jobs->lastItem() ?? 0;
         $countText = "Showing {$firstItem} - {$lastItem} of {$jobs->total()} results";
@@ -150,6 +170,8 @@ class JobController extends Controller
         
         $hasApplied = false;
         $isFavorited = false;
+        $candidateApplicationBalance = null;
+        $canApplyWithBalance = true;
 
         if (Auth::check() && Auth::user()->isCandidate()) {
             $hasApplied = JobApplication::where('user_id', Auth::id())
@@ -160,6 +182,9 @@ class JobController extends Controller
                 ->favoriteJobs()
                 ->where('jobs.id', $job->id)
                 ->exists();
+
+            $candidateApplicationBalance = (int) (Auth::user()->job_application_balance ?? 0);
+            $canApplyWithBalance = $candidateApplicationBalance > 0;
         }
 
         $relatedJobs = Job::with('user')
@@ -172,7 +197,14 @@ class JobController extends Controller
             ->limit(3)
             ->get();
 
-        return view('jobs.show', compact('job', 'relatedJobs', 'hasApplied', 'isFavorited'));
+        return view('jobs.show', compact(
+            'job',
+            'relatedJobs',
+            'hasApplied',
+            'isFavorited',
+            'candidateApplicationBalance',
+            'canApplyWithBalance'
+        ));
     }
 
     protected function recordJobView(int $jobId, Request $request): void

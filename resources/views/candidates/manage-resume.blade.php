@@ -1,6 +1,6 @@
  @extends('layouts.app')
 
-@section('title', 'Job Alerts')
+@section('title', 'Manage Resume')
 
 @section('content')
 
@@ -21,11 +21,11 @@
                 </p>
               </div>
               <div class="d-flex flex-wrap gap-2">
-                <a href="#." class="btn btn-outline-primary"
-                  ><i class="fa-solid fa-clone" aria-hidden="true"></i>
-                  Duplicate latest</a
+                <a href="{{ route('candidate.edit-profile') }}" class="btn btn-outline-primary"
+                  ><i class="fa-solid fa-upload" aria-hidden="true"></i>
+                  Upload / Replace Resume</a
                 >
-                <a href="build-resume.html" class="btn btn-primary"
+                <a href="{{ route('candidate.build-resume') }}" class="btn btn-primary"
                   ><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit in
                   builder</a
                 >
@@ -37,50 +37,48 @@
               <ul>
                 <li>
                   <div>
-                    <strong>General Product Resume</strong>
+                    <strong>{{ $profile->title ?: 'Default Resume' }}</strong>
                     <p class="mb-0 text-muted">
-                      Default · Used in 8 applications · Last edited Apr 10
+                      Default · Used in {{ $applicationsWithResume }} applications ·
+                      {{ $lastResumeViewAt ? 'Last viewed '.$lastResumeViewAt->diffForHumans() : 'No views yet' }}
                     </p>
                   </div>
                   <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-outline-success btn-sm rounded-3">
-                      Default
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm rounded-3">
-                      Share
-                    </button>
+                    @if ($profile->resume)
+                      <a href="{{ \Illuminate\Support\Facades\Storage::url($profile->resume) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-success btn-sm rounded-3">
+                        View Resume
+                      </a>
+                    @else
+                      <button class="btn btn-outline-secondary btn-sm rounded-3" disabled>
+                        No Resume Uploaded
+                      </button>
+                    @endif
                   </div>
                 </li>
                 <li>
                   <div>
-                    <strong>Fintech Leadership</strong>
+                    <strong>Resume Views</strong>
                     <p class="mb-0 text-muted">
-                      Tailored to B2B fintech &amp; banks · Updated Mar 21
+                      Employers opened your resume {{ $resumeViewsCount }} times.
                     </p>
                   </div>
                   <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-outline-secondary btn-sm rounded-3">
-                      Set default
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm rounded-3">
-                      Archive
-                    </button>
+                    <a href="{{ route('candidate.applications') }}" class="btn btn-outline-primary btn-sm rounded-3">
+                      View Applications
+                    </a>
                   </div>
                 </li>
                 <li>
                   <div>
-                    <strong>Contract / Freelance</strong>
+                    <strong>Visibility</strong>
                     <p class="mb-0 text-muted">
-                      Hourly rate focus · Updated Feb 11
+                      Resume is {{ $profile->is_searchable ? 'searchable' : 'not searchable' }} for recruiters.
                     </p>
                   </div>
                   <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-outline-secondary btn-sm rounded-3">
-                      Set default
-                    </button>
-                    <button class="btn btn-outline-danger btn-sm rounded-3">
-                      Archive
-                    </button>
+                    <a href="{{ route('candidate.edit-profile') }}" class="btn btn-outline-secondary btn-sm rounded-3">
+                      Update Visibility
+                    </a>
                   </div>
                 </li>
               </ul>

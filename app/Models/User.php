@@ -40,6 +40,9 @@ class User extends Authenticatable
         'tagline',
         'summary',
         'rating',
+        'account_status',
+        'job_posting_balance',
+        'job_application_balance',
     ];
 
     public function candidateProfile()
@@ -75,6 +78,9 @@ class User extends Authenticatable
         'otp_last_sent_at' => 'datetime',
         'otp_attempts' => 'integer',
         'email_verified' => 'boolean',
+        'rating' => 'decimal:2',
+        'job_posting_balance' => 'integer',
+        'job_application_balance' => 'integer',
     ];
 
     public function jobs()
@@ -98,6 +104,46 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    public function candidateConversations()
+    {
+        return $this->hasMany(Conversation::class, 'candidate_user_id');
+    }
+
+    public function employerConversations()
+    {
+        return $this->hasMany(Conversation::class, 'employer_user_id');
+    }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(Message::class, 'sender_user_id');
+    }
+
+    public function followingEmployers()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'employer_followers',
+            'candidate_user_id',
+            'employer_user_id'
+        )->withTimestamps();
+    }
+
+    public function followers()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'employer_followers',
+            'employer_user_id',
+            'candidate_user_id'
+        )->withTimestamps();
+    }
+
+    public function pageActivities()
+    {
+        return $this->hasMany(UserPageActivity::class);
+    }
+
     public static function findByUsername($username)
     {
         return self::where('username', $username)->first();
@@ -111,6 +157,21 @@ class User extends Authenticatable
     public function isCandidate()
     {
         return $this->role?->name === 'candidate';
+    }
+
+    public function isSuspended(): bool
+    {
+        return (string) ($this->account_status ?? 'Active') === 'Suspended';
+    }
+
+    public function hasJobPostingCredits(): bool
+    {
+        return (int) ($this->job_posting_balance ?? 0) > 0;
+    }
+
+    public function hasJobApplicationCredits(): bool
+    {
+        return (int) ($this->job_application_balance ?? 0) > 0;
     }
 
     public function getLogoUrlAttribute(): string

@@ -22,6 +22,11 @@
           </div>
         </div>
 
+        <div class="alert {{ ($applicationBalance ?? 0) <= 2 ? 'alert-warning' : 'alert-info' }} d-flex justify-content-between align-items-center">
+          <span><i class="fa-solid fa-wallet" aria-hidden="true"></i> Remaining application credits</span>
+          <strong>{{ number_format((int) ($applicationBalance ?? 0)) }}</strong>
+        </div>
+
         <div class="row row-cols-1 row-cols-lg-2 g-4 application-grid" id="applicationsContainer">
           @forelse($applications as $application)
             <div class="col" data-application-id="{{ $application->id }}">

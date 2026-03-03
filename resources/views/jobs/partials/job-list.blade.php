@@ -5,6 +5,15 @@
                 <span class="job-type {{ strtolower(str_replace(' ', '', $job->employment_type)) }}">
                     {{ $job->employment_type }}
                 </span>
+                @if(isset($job->ai_match_score))
+                    <span
+                        class="job-type"
+                        style="margin-left:.45rem;background: {{ (int) $job->ai_match_score >= 75 ? '#d1e7dd' : ((int) $job->ai_match_score >= 45 ? '#fff3cd' : '#f8d7da') }}; color: #111;"
+                        title="{{ implode(', ', $job->ai_match_highlights ?? []) }}"
+                    >
+                        AI Match {{ (int) $job->ai_match_score }}%
+                    </span>
+                @endif
             </div>
             <div class="job-list-main">
                 <div class="job-list-logo">

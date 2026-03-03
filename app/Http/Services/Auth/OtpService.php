@@ -76,6 +76,12 @@ class OtpService
             ]);
         }
 
+        if ($user->isEmployer() && $user->isSuspended()) {
+            throw ValidationException::withMessages([
+                'otp' => ['Your employer account is suspended. Contact support.'],
+            ]);
+        }
+
         $this->validateOtpAttempt($user);
         $this->assertOtpMatches($user, $otp);
 

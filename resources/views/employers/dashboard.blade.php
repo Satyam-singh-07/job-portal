@@ -28,7 +28,7 @@
                                 <span class="stat-icon"><i class="fa-regular fa-clock"></i></span>
                                 <div>
                                     <span>Open Jobs</span>
-                                    <strong>5</strong>
+                                    <strong>{{ number_format((int) ($stats['active'] ?? 0)) }}</strong>
                                 </div>
                             </div>
                         </div>
@@ -37,7 +37,7 @@
                                 <span class="stat-icon"><i class="fa-solid fa-user-group"></i></span>
                                 <div>
                                     <span>Followers</span>
-                                    <strong>2</strong>
+                                    <strong>{{ number_format((int) ($stats['followers'] ?? 0)) }}</strong>
                                 </div>
                             </div>
                         </div>
@@ -45,12 +45,33 @@
                             <div class="stat-card stat-blue">
                                 <span class="stat-icon"><i class="fa-regular fa-envelope"></i></span>
                                 <div>
-                                    <span>Messages</span>
-                                    <strong>0</strong>
+                                    <span>Unread Messages</span>
+                                    <strong>{{ number_format((int) ($stats['unread_messages'] ?? 0)) }}</strong>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <section class="employer-panel">
+                        <div class="panel-heading">
+                            <h3>Posting Balance</h3>
+                            <a href="{{ route('employer.post-job') }}">Use credits</a>
+                        </div>
+                        <div class="package-grid">
+                            <div class="package-chip icon blue">
+                                <span class="chip-label">Remaining Job Posting Credits</span>
+                                <strong>{{ number_format((int) ($postingBalance ?? 0)) }}</strong>
+                            </div>
+                            <div class="package-chip icon teal">
+                                <span class="chip-label">Total Applications</span>
+                                <strong>{{ number_format((int) ($stats['total_applications'] ?? 0)) }}</strong>
+                            </div>
+                            <div class="package-chip icon orange">
+                                <span class="chip-label">Pending Reviews</span>
+                                <strong>{{ number_format((int) ($stats['pending_reviews'] ?? 0)) }}</strong>
+                            </div>
+                        </div>
+                    </section>
 
                     <section class="employer-panel package-detail-panel">
                         <div class="package-detail-header">
@@ -71,8 +92,8 @@
                             </article>
                             <article class="package-detail-card exact">
                                 <span class="detail-icon green"><i class="fa-solid fa-clipboard-check"></i></span>
-                                <span class="detail-label">Available Quota</span>
-                                <strong class="quota">0 / 24</strong>
+                                <span class="detail-label">Remaining Credits</span>
+                                <strong class="quota">{{ number_format((int) ($postingBalance ?? 0)) }}</strong>
                             </article>
                             <article class="package-detail-card exact">
                                 <span class="detail-icon blue"><i class="fa-regular fa-calendar"></i></span>

@@ -27,4 +27,9 @@ class JobApplication extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function resumeViews()
+    {
+        return $this->hasMany(ResumeView::class, 'job_application_id');
+    }
 }

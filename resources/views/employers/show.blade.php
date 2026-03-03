@@ -1,6 +1,80 @@
 @extends('layouts.app')
 
-@section('title', ($employer->company_name ?: 'Company').' Detail')
+@php
+    $siteName = config('app.name', 'Job Portal');
+    $companyName = $employer->company_name ?: 'Company';
+    $companyUrl = route('company.show', ['username' => ltrim((string) $employer->username, '@')]);
+    $metaDescription = \Illuminate\Support\Str::limit(
+        trim(($employer->summary ?: $companyName.' is hiring for multiple roles.').' View open positions, team details, and apply online.'),
+        160
+    );
+@endphp
+
+@section('title', $companyName.' Careers & Open Jobs | '.$siteName)
+@section('meta_description', $metaDescription)
+@section('canonical_url', $companyUrl)
+@section('og_type', 'profile')
+@section('og_title', $companyName.' Careers & Open Jobs')
+@section('og_description', $metaDescription)
+@section('og_url', $companyUrl)
+@section('og_image', $employer->logo_url)
+@section('twitter_image', $employer->logo_url)
+
+@push('structured_data')
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        [
+            '@type' => 'ListItem',
+            'position' => 1,
+            'name' => 'Home',
+            'item' => url('/'),
+        ],
+        [
+            '@type' => 'ListItem',
+            'position' => 2,
+            'name' => 'Employers',
+            'item' => route('employers.index'),
+        ],
+        [
+            '@type' => 'ListItem',
+            'position' => 3,
+            'name' => $companyName,
+            'item' => $companyUrl,
+        ],
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'Organization',
+    'name' => $companyName,
+    'url' => $companyUrl,
+    'logo' => $employer->logo_url,
+    'description' => $employer->summary ?: null,
+    'sameAs' => $employer->website ? [$employer->website] : [],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'ItemList',
+    'name' => $companyName.' Open Jobs',
+    'numberOfItems' => $openJobs->count(),
+    'itemListElement' => $openJobs->values()->map(function ($job, $index) {
+        return [
+            '@type' => 'ListItem',
+            'position' => $index + 1,
+            'url' => route('jobs.show', ['slug' => $job->slug]),
+            'name' => $job->title,
+        ];
+    })->all(),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@endpush
 
 @section('content')
 <section class="company-hero">
@@ -27,6 +101,30 @@
             <div class="company-hero-actions">
                 <a href="#openings" class="btn btn-primary"><i class="fa-solid fa-briefcase" aria-hidden="true"></i>
                     View Open Roles</a>
+                @auth
+                    @if(auth()->user()->isCandidate())
+                        @if($isFollowing)
+                            <form action="{{ route('candidate.followings.destroy', $employer->id) }}" method="POST" class="d-inline">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-outline-danger">
+                                    <i class="fa-solid fa-user-minus" aria-hidden="true"></i> Unfollow
+                                </button>
+                            </form>
+                        @else
+                            <form action="{{ route('candidate.followings.store', $employer->id) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-primary">
+                                    <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Follow Company
+                                </button>
+                            </form>
+                        @endif
+                    @endif
+                @else
+                    <a href="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-user-plus" aria-hidden="true"></i> Follow Company
+                    </a>
+                @endauth
             </div>
         </div>
     </div>
@@ -126,6 +224,10 @@
                             <div class="fact-item">
                                 <dt><i class="fa-solid fa-user-check"></i> Total Applicants</dt>
                                 <dd>{{ $totalApplicants }}</dd>
+                            </div>
+                            <div class="fact-item">
+                                <dt><i class="fa-solid fa-users"></i> Followers</dt>
+                                <dd>{{ $followersCount }}</dd>
                             </div>
                         </dl>
                     </div>

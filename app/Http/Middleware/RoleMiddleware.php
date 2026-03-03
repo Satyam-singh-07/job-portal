@@ -23,6 +23,14 @@ class RoleMiddleware
 
         }
 
+        if ($role === 'employer' && Auth::user()->isSuspended()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->with('error', 'Your employer account is suspended. Contact support.');
+        }
+
         return $next($request);
     }
 }

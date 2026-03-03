@@ -4,6 +4,7 @@ namespace App\Http\Services\Auth;
 
 use App\Mail\OtpVerificationMail;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\PlatformSetting;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -35,10 +36,15 @@ class AuthService
 
         if ($existing && ! $existing->email_verified) {
             return DB::transaction(function () use ($existing, $request, $otp) {
+                $defaultPostingBalance = PlatformSetting::getInt('employer_default_posting_balance', 10);
+                $defaultApplicationBalance = PlatformSetting::getInt('candidate_default_application_balance', 25);
+
                 $existing->update([
                     'password' => Hash::make($request->password),
                     'otp_code' => $this->otpService->hash($otp),
                     'otp_expires_at' => now()->addMinutes(10),
+                    'job_posting_balance' => $request->role === 'employer' ? $defaultPostingBalance : 0,
+                    'job_application_balance' => $request->role === 'candidate' ? $defaultApplicationBalance : 0,
                 ]);
 
                 $this->sendOtp($existing, $otp);
@@ -54,6 +60,9 @@ class AuthService
 
             try {
                 $user = DB::transaction(function () use ($request, $role, $otp, $username) {
+                    $defaultPostingBalance = PlatformSetting::getInt('employer_default_posting_balance', 10);
+                    $defaultApplicationBalance = PlatformSetting::getInt('candidate_default_application_balance', 25);
+
                     return User::create([
                         'role_id' => $role->id,
                         'email' => $request->email,
@@ -68,6 +77,8 @@ class AuthService
                         'otp_code' => $this->otpService->hash($otp),
                         'otp_expires_at' => now()->addMinutes(10),
                         'email_verified' => false,
+                        'job_posting_balance' => $request->role === 'employer' ? $defaultPostingBalance : 0,
+                        'job_application_balance' => $request->role === 'candidate' ? $defaultApplicationBalance : 0,
                     ]);
                 });
 
@@ -110,6 +121,14 @@ class AuthService
 
         if (! $user->role) {
             throw new \RuntimeException('No role assigned for this account.');
+        }
+
+        if ($user->isEmployer() && $user->isSuspended()) {
+            return [
+                'status' => false,
+                'otp_required' => false,
+                'message' => 'Your employer account is suspended. Contact support.',
+            ];
         }
 
         Auth::login($user, (bool) ($credentials['remember'] ?? false));

@@ -213,10 +213,14 @@
 
                 <!-- Right Side -->
                 <div class="navbar-actions d-flex align-items-center gap-2">
-                     <a href="{{ route('login') }}" class="btn btn-primary register-btn">
+                     
+                   {{-- @if (
+                    !auth()->user()->isCandidate()
+                    ) --}}
+                    <a href="{{ route('login') }}" class="btn btn-primary register-btn">
                             Free Job Post
                         </a>
-
+{{-- @endif  --}}
                     @guest
                         <a href="{{ route('login') }}" class="btn btn-outline-primary signin-btn">
                             Sign in
@@ -292,7 +296,7 @@
 
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="{{ auth()->user()->role === 'candidate' ? route('candidate.dashboard') : route('employer.dashboard') }}">
+                                    <a class="dropdown-item" href="{{ $isCandidateUser ? route('candidate.dashboard') : route('employer.dashboard') }}">
                                         Dashboard
                                     </a>
                                 </li>

@@ -1,6 +1,91 @@
 @extends('layouts.app')
 
-@section('title', $job->title)
+@php
+    $siteName = config('app.name', 'Job Portal');
+    $companyName = $job->user->company_name ?: 'Company';
+    $jobUrl = route('jobs.show', ['slug' => $job->slug]);
+    $companyUrl = route('company.show', ['username' => ltrim((string) $job->user->username, '@')]);
+    $jobDescription = trim(strip_tags(($job->summary ?: '').' '.($job->responsibilities ?: '')));
+    $metaDescription = \Illuminate\Support\Str::limit(
+        trim(($job->summary ?: '').' '.$job->location.' · '.$job->employment_type.' at '.$companyName.'.'),
+        160
+    );
+    $validThrough = $job->updated_at ? $job->updated_at->copy()->addDays(30)->toAtomString() : null;
+@endphp
+
+@section('title', $job->title.' at '.$companyName.' | '.$siteName)
+@section('meta_description', $metaDescription)
+@section('canonical_url', $jobUrl)
+@section('og_type', 'article')
+@section('og_title', $job->title.' at '.$companyName)
+@section('og_description', $metaDescription)
+@section('og_url', $jobUrl)
+@section('og_image', $job->user->logo_url)
+@section('twitter_image', $job->user->logo_url)
+
+@push('structured_data')
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => [
+        [
+            '@type' => 'ListItem',
+            'position' => 1,
+            'name' => 'Home',
+            'item' => url('/'),
+        ],
+        [
+            '@type' => 'ListItem',
+            'position' => 2,
+            'name' => 'Jobs',
+            'item' => route('jobs.index'),
+        ],
+        [
+            '@type' => 'ListItem',
+            'position' => 3,
+            'name' => $job->title,
+            'item' => $jobUrl,
+        ],
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'JobPosting',
+    'title' => $job->title,
+    'description' => $jobDescription,
+    'identifier' => [
+        '@type' => 'PropertyValue',
+        'name' => $siteName,
+        'value' => 'JP-'.$job->id,
+    ],
+    'datePosted' => optional($job->created_at)->toAtomString(),
+    'validThrough' => $validThrough,
+    'employmentType' => $job->employment_type,
+    'hiringOrganization' => [
+        '@type' => 'Organization',
+        'name' => $companyName,
+        'sameAs' => $job->user->website ?: $companyUrl,
+        'logo' => $job->user->logo_url,
+    ],
+    'jobLocation' => [
+        '@type' => 'Place',
+        'address' => [
+            '@type' => 'PostalAddress',
+            'addressLocality' => $job->location,
+        ],
+    ],
+    'applicantLocationRequirements' => [
+        '@type' => 'Country',
+        'name' => 'Any',
+    ],
+    'directApply' => (bool) $job->allow_quick_apply,
+    'url' => $jobUrl,
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@endpush
 
 @section('content')
 
@@ -43,8 +128,17 @@
                             <button type="button" class="btn btn-success" disabled>
                                 <i class="fa-solid fa-check-circle" aria-hidden="true"></i> Applied
                             </button>
+                        @elseif(auth()->check() && auth()->user()->isCandidate() && empty($canApplyWithBalance))
+                            <button type="button" class="btn btn-outline-secondary" disabled>
+                                <i class="fa-solid fa-wallet" aria-hidden="true"></i> No Apply Credits
+                            </button>
                         @else
-                            <button type="button" class="btn btn-primary" id="applyNowBtn">
+                            <button
+                                type="button"
+                                class="btn btn-primary"
+                                id="applyNowBtn"
+                                data-can-apply="{{ (auth()->check() && auth()->user()->isCandidate()) ? ((int) (!empty($canApplyWithBalance))): 1 }}"
+                            >
                                 <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Apply Now
                             </button>
                         @endif
@@ -163,6 +257,10 @@
                                     <button type="button" class="btn btn-success" disabled>
                                         Already Applied
                                     </button>
+                                @elseif(auth()->check() && auth()->user()->isCandidate() && empty($canApplyWithBalance))
+                                    <button type="button" class="btn btn-outline-secondary" disabled>
+                                        No Apply Credits
+                                    </button>
                                 @else
                                     <button type="button" class="btn btn-primary" onclick="$('#applyNowBtn').click()">
                                         Submit Application
@@ -170,6 +268,14 @@
                                 @endif
                             @endif
                         </div>
+                        @if(auth()->check() && auth()->user()->isCandidate())
+                            <div class="w-100 mt-2">
+                                <small class="text-muted">
+                                    Remaining apply credits:
+                                    <strong id="candidateApplicationBalance">{{ number_format((int) ($candidateApplicationBalance ?? 0)) }}</strong>
+                                </small>
+                            </div>
+                        @endif
                     </article>
                 </div>
 
@@ -210,11 +316,25 @@
                                 <input type="hidden" name="job_id" value="{{ $job->id }}">
                                 <div class="mb-3">
                                     <label class="form-label" for="contactName">Full name</label>
-                                    <input type="text" name="name" class="form-control" id="contactName" placeholder="Your name" required />
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        class="form-control"
+                                        id="contactName"
+                                        placeholder="Your name"
+                                        value="@auth{{ trim((auth()->user()->first_name ?? '').' '.(auth()->user()->last_name ?? '')) }}@endauth"
+                                    />
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" for="contactEmail">Email address</label>
-                                    <input type="email" name="email" class="form-control" id="contactEmail" placeholder="you@email.com" required />
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        class="form-control"
+                                        id="contactEmail"
+                                        placeholder="you@email.com"
+                                        value="@auth{{ auth()->user()->email }}@endauth"
+                                    />
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" for="contactMessage">Message</label>
@@ -339,6 +459,12 @@
 $(document).ready(function() {
     // Apply Now interaction
     $('#applyNowBtn').on('click', function() {
+        const canApply = Number($(this).data('can-apply') || 1) === 1;
+        if (!canApply) {
+            showToast('No job application balance left. Contact admin or upgrade your package.', 'error');
+            return;
+        }
+
         @auth
             if ("{{ auth()->user()->isCandidate() }}") {
                 $('#applyJobModal').modal('show');
@@ -371,6 +497,7 @@ $(document).ready(function() {
                 
                 // Optionally update UI to show "Applied" status
                 $('#applyNowBtn').prop('disabled', true).text('Applied').removeClass('btn-primary').addClass('btn-success');
+                $('#applyNowBtn').attr('data-can-apply', '0');
             },
             error: function(xhr) {
                 $btn.prop('disabled', false).text(originalText);
@@ -452,16 +579,39 @@ $(document).ready(function() {
     $('#contactEmployerForm').on('submit', function(e) {
         e.preventDefault();
         const $btn = $('#sendMessageBtn');
-        const originalText = $btn.text();
+        const originalText = $btn.text().trim();
+        const message = $('#contactMessage').val();
         
         $btn.prop('disabled', true).text('Sending...');
 
-        // Placeholder for AJAX contact
-        setTimeout(() => {
-            showToast('Message sent successfully! The employer will contact you soon.');
-            $btn.prop('disabled', false).text(originalText);
-            $('#contactEmployerForm')[0].reset();
-        }, 1500);
+        $.ajax({
+            url: "{{ route('candidate.jobs.contact', $job->id) }}",
+            method: 'POST',
+            data: {
+                _token: $('meta[name=\"csrf-token\"]').attr('content'),
+                message: message
+            },
+            success: function(response) {
+                showToast(response?.message || 'Message sent successfully! The employer will contact you soon.');
+                $('#contactEmployerForm')[0].reset();
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    window.location.href = "{{ route('login') }}?redirect={{ url()->current() }}";
+                    return;
+                }
+
+                if (xhr.status === 403) {
+                    showToast('Only candidates can send messages.', 'error');
+                    return;
+                }
+
+                showToast(xhr.responseJSON?.message || 'Unable to send message right now.', 'error');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).text(originalText || 'Send Message');
+            }
+        });
     });
 });
 

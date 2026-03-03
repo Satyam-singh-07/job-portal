@@ -32,7 +32,7 @@ class CandidateProfileController extends Controller
             'value' => 'required|boolean',
         ]);
 
-        $profile = auth()->user()->candidateProfile;
+        $profile = auth()->user()->candidateProfile ?? auth()->user()->candidateProfile()->create();
         $profile->update([
             $request->field => $request->value,
         ]);
@@ -40,6 +40,28 @@ class CandidateProfileController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Visibility setting updated successfully.',
+        ]);
+    }
+
+    public function updateOpenToWork(Request $request)
+    {
+        $validated = $request->validate([
+            'open_to_work' => 'required|boolean',
+        ]);
+
+        $profile = auth()->user()->candidateProfile ?? auth()->user()->candidateProfile()->create();
+        $isSearchable = (bool) $validated['open_to_work'];
+
+        $profile->update([
+            'is_searchable' => $isSearchable,
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'open_to_work' => $profile->is_searchable,
+            'message' => $profile->is_searchable
+                ? 'Open to Work is enabled.'
+                : 'Open to Work is disabled.',
         ]);
     }
 
