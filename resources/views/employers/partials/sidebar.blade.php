@@ -4,6 +4,7 @@
                         <h2>{{ auth()->user()->company_name }}</h2>
                         <p>{{ auth()->user()->email }}</p>
                         <span class="company-pill">Premium Employer</span>
+                        <p class="mb-0 mt-2">Posting credits: {{ number_format((int) (auth()->user()->job_posting_balance ?? 0)) }}</p>
                     </div>
                     <ul class="dashboard-nav">
                         <li class="@if (request()->routeIs('employer.dashboard')) active @endif">
@@ -13,25 +14,29 @@
                             <a href="{{ route('employer.company-profile') }}"><i class="fa-solid fa-user-pen"></i> Edit Company Details</a>
                         </li>
                         <li>
-                            <a href="{{ route('company.show', ['username' => auth()->user()->username]) }}"><i class="fa-solid fa-building"></i> Company Public
+                            <a href="{{ route('company.show', ['username' => ltrim(auth()->user()->username, '@')]) }}"><i class="fa-solid fa-building"></i> Company Public
                                 Profile</a>
                         </li>
                         <li class="@if (request()->routeIs('employer.post-job')) active @endif">
                             <a href="{{ route('employer.post-job') }}"><i class="fa-solid fa-plus"></i> Post a Job</a>
                         </li>
-                        <li class="@if (request()->routeIs('employer.manage-jobs')) active @endif">
+                        <li class="@if (request()->routeIs('employer.manage-jobs') || request()->routeIs('employer.jobs.applications')) active @endif">
                             <a href="{{ route('employer.manage-jobs') }}"><i class="fa-solid fa-briefcase"></i> Manage Jobs</a>
                         </li>
-                         <li>
-                            <a href="#"><i class="fa-solid fa-layer-group"></i> CV Search</a>
+                         <li class="@if (request()->routeIs('employer.cv-search')) active @endif">
+                            <a href="{{ route('employer.cv-search') }}"><i class="fa-solid fa-layer-group"></i> CV Search</a>
+                        </li>
+                        <li class="@if (request()->routeIs('employer.messages')) active @endif">
+                            <a href="{{ route('employer.messages') }}"><i class="fa-solid fa-envelope"></i> Company Messages</a>
+                        </li>
+                        <li class="@if (request()->routeIs('employer.followers')) active @endif">
+                            <a href="{{ route('employer.followers') }}"><i class="fa-solid fa-users"></i> Company Followers</a>
                         </li>
                         {{--
                         <li>
                             <a href="#"><i class="fa-solid fa-credit-card"></i> Payment History</a>
                         </li>
-                        <li>
-                            <a href="#"><i class="fa-solid fa-envelope"></i> Company Messages</a>
-                        </li> --}}
+                        --}}
                         {{-- <li>
                             <a href="#"><i class="fa-solid fa-users"></i> Company Followers</a>
                         </li>  --}}

@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 
 class RoleSeeder extends Seeder
@@ -12,10 +12,8 @@ class RoleSeeder extends Seeder
      */
     public function run(): void
     {
-        \App\Models\Role::insert([
-        ['name' => 'candidate'],
-        ['name' => 'employer'],
-        ['name' => 'admin'],
-    ]);
+        foreach (['candidate', 'employer', 'admin'] as $roleName) {
+            Role::firstOrCreate(['name' => $roleName]);
+        }
     }
 }

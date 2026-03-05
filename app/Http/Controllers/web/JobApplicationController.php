@@ -8,6 +8,7 @@ use App\Models\Job;
 use App\Models\JobApplication;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class JobApplicationController extends Controller
 {
@@ -26,7 +27,10 @@ class JobApplicationController extends Controller
         $user = Auth::user();
         $applications = $this->applicationService->getCandidateApplications($user);
 
-        return view('candidates.applications', compact('applications'));
+        return view('candidates.applications', [
+            'applications' => $applications,
+            'applicationBalance' => (int) ($user->job_application_balance ?? 0),
+        ]);
     }
 
     /**
@@ -34,26 +38,12 @@ class JobApplicationController extends Controller
      */
     public function store(Request $request, Job $job)
     {
-        // Simple validation for enterprise level
         $request->validate([
             'cover_letter' => 'nullable|string|max:5000',
         ]);
 
         try {
             $user = Auth::user();
-            
-            // Check if profile exists and has a resume
-            if (!$user->candidateProfile || !$user->candidateProfile->resume) {
-                $message = 'Please complete your profile and upload a resume before applying.';
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $message,
-                        'redirect' => route('candidate.edit-profile')
-                    ], 422);
-                }
-                return redirect()->route('candidate.edit-profile')->with('error', $message);
-            }
 
             $this->applicationService->apply($user, $job, $request->only('cover_letter'));
 
@@ -65,14 +55,32 @@ class JobApplicationController extends Controller
             }
 
             return back()->with('success', 'Application submitted successfully!');
-        } catch (\Exception $e) {
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first() ?: 'Unable to submit application.';
+
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $e->getMessage()
-                ], 400);
+                    'message' => $message,
+                    'errors' => $e->errors(),
+                    'redirect' => str_contains(strtolower($message), 'upload a resume')
+                        ? route('candidate.edit-profile')
+                        : null,
+                ], 422);
             }
-            return back()->with('error', $e->getMessage());
+
+            return back()->with('error', $message);
+        } catch (\Throwable $e) {
+            report($e);
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to submit application right now. Please try again.'
+                ], 500);
+            }
+
+            return back()->with('error', 'Unable to submit application right now. Please try again.');
         }
     }
 

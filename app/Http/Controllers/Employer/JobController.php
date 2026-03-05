@@ -8,6 +8,7 @@ use App\Http\Services\Employer\JobService;
 use App\Models\Job;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class JobController extends Controller
 {
@@ -58,6 +59,18 @@ class JobController extends Controller
             }
 
             return redirect()->route('employer.manage-jobs')->with('success', 'Job posted successfully!');
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first() ?: 'Validation failed.';
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+
+            return back()->with('error', $message)->withInput();
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json([
@@ -104,6 +117,18 @@ class JobController extends Controller
             }
 
             return redirect()->route('employer.manage-jobs')->with('success', 'Job updated successfully!');
+        } catch (ValidationException $e) {
+            $message = collect($e->errors())->flatten()->first() ?: 'Validation failed.';
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+
+            return back()->with('error', $message)->withInput();
         } catch (\Exception $e) {
             if ($request->ajax()) {
                 return response()->json([
@@ -121,8 +146,15 @@ class JobController extends Controller
     public function publish(Job $job)
     {
         $this->authorizeOwner($job);
-        $this->jobService->updateStatus($job, 'Published');
-        return response()->json(['success' => true, 'message' => 'Job published successfully!']);
+        try {
+            $this->jobService->updateStatus($job, 'Published');
+            return response()->json(['success' => true, 'message' => 'Job published successfully!']);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first() ?: 'Unable to publish job.',
+            ], 422);
+        }
     }
 
     /**
@@ -141,8 +173,15 @@ class JobController extends Controller
     public function reopen(Job $job)
     {
         $this->authorizeOwner($job);
-        $this->jobService->updateStatus($job, 'Published');
-        return response()->json(['success' => true, 'message' => 'Job reopened successfully!']);
+        try {
+            $this->jobService->updateStatus($job, 'Published');
+            return response()->json(['success' => true, 'message' => 'Job reopened successfully!']);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first() ?: 'Unable to reopen job.',
+            ], 422);
+        }
     }
 
     /**

@@ -1,0 +1,182 @@
+<?php
+
+namespace App\Http\Controllers\Employer;
+
+use App\Http\Controllers\Controller;
+use App\Http\Services\AI\JobMatchService;
+use App\Models\Job;
+use App\Models\JobApplication;
+use App\Models\ResumeView;
+use App\Notifications\ApplicationStatusUpdatedNotification;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+
+class JobApplicationController extends Controller
+{
+    public function __construct(protected JobMatchService $jobMatchService)
+    {
+    }
+
+    protected array $allowedStatuses = [
+        'Pending',
+        'Reviewed',
+        'Interviewing',
+        'Offered',
+        'Rejected',
+        'Accepted',
+    ];
+
+    public function index(Job $job, Request $request)
+    {
+        $this->authorizeOwner($job);
+
+        $status = $request->string('status')->toString();
+        $search = trim((string) $request->input('search'));
+
+        $applicationsQuery = $job->applications()
+            ->with(['user.candidateProfile'])
+            ->withCount('resumeViews')
+            ->latest();
+
+        if ($status !== '' && in_array($status, $this->allowedStatuses, true)) {
+            $applicationsQuery->where('status', $status);
+        }
+
+        if ($search !== '') {
+            $applicationsQuery->whereHas('user', function ($query) use ($search) {
+                $query->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('username', 'like', "%{$search}%");
+            });
+        }
+
+        $applicationsCollection = $applicationsQuery->get();
+
+        $applicationsWithScores = $applicationsCollection->map(function (JobApplication $application) use ($job): JobApplication {
+            $candidate = $application->user;
+
+            if (! $candidate) {
+                $application->setAttribute('ai_match_score', 0);
+                $application->setAttribute('ai_match_label', 'Low');
+                $application->setAttribute('ai_match_highlights', []);
+                return $application;
+            }
+
+            $result = $this->jobMatchService->score($candidate, $job);
+            $application->setAttribute('ai_match_score', (int) $result['score']);
+            $application->setAttribute('ai_match_label', (string) $result['label']);
+            $application->setAttribute('ai_match_highlights', (array) $result['highlights']);
+
+            return $application;
+        })->sortByDesc('ai_match_score')->values();
+
+        $perPage = 12;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $items = $applicationsWithScores->slice(($page - 1) * $perPage, $perPage)->values();
+        $applications = new LengthAwarePaginator(
+            $items,
+            $applicationsWithScores->count(),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+
+        $statusStats = $job->applications()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return view('employer.job-applications', [
+            'job' => $job,
+            'applications' => $applications,
+            'statusFilter' => $status,
+            'search' => $search,
+            'allowedStatuses' => $this->allowedStatuses,
+            'statusStats' => $statusStats,
+            'totalApplications' => (int) $job->applications()->count(),
+            'topMatchScore' => (int) ($applicationsWithScores->first()?->ai_match_score ?? 0),
+        ]);
+    }
+
+    public function viewResume(Job $job, JobApplication $application)
+    {
+        $this->authorizeOwner($job);
+
+        if ($application->job_id !== $job->id) {
+            abort(404);
+        }
+
+        $application->loadMissing(['user.candidateProfile']);
+
+        $resumePath = $application->resume_path ?: $application->user?->candidateProfile?->resume;
+        if (! $resumePath) {
+            return back()->with('error', 'Resume not available for this application.');
+        }
+
+        ResumeView::create([
+            'job_application_id' => $application->id,
+            'candidate_user_id' => (int) $application->user_id,
+            'employer_user_id' => (int) auth()->id(),
+            'viewed_at' => now(),
+        ]);
+
+        return redirect()->away(Storage::url($resumePath));
+    }
+
+    public function updateStatus(Job $job, JobApplication $application, Request $request)
+    {
+        $this->authorizeOwner($job);
+
+        if ($application->job_id !== $job->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'status' => ['required', 'string', Rule::in($this->allowedStatuses)],
+        ]);
+
+        $oldStatus = (string) $application->status;
+        $newStatus = (string) $validated['status'];
+
+        if ($oldStatus === $newStatus) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Application status is already up to date.',
+                'status' => $application->status,
+            ]);
+        }
+
+        $application->update([
+            'status' => $newStatus,
+        ]);
+
+        $application->loadMissing(['job', 'user']);
+
+        if ($application->user) {
+            $application->user->notify(new ApplicationStatusUpdatedNotification(
+                $application,
+                $oldStatus,
+                $newStatus,
+            ));
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Application status updated successfully.',
+            'status' => $application->status,
+        ]);
+    }
+
+    protected function authorizeOwner(Job $job): void
+    {
+        if ($job->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+}

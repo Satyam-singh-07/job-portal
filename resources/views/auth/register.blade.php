@@ -396,7 +396,7 @@
                               </div>
                           </div>
                           <p class="auth-switch">
-                              Already have an account? <a href="login.html">Sign in</a>
+                              Already have an account? <a href="{{ route('login') }}">Sign in</a>
                           </p>
 
 
@@ -451,216 +451,285 @@
 
   @section('scripts')
       <script>
-          document.addEventListener("DOMContentLoaded", function() {
+          document.addEventListener("DOMContentLoaded", () => {
+              const toastEl = document.getElementById("liveToast");
+              const toast = toastEl ? new bootstrap.Toast(toastEl) : null;
 
-              const toastEl = document.getElementById('liveToast');
-              const toast = new bootstrap.Toast(toastEl);
+              const authCard = document.querySelector(".auth-card");
+              const otpWrapper = document.getElementById("otpWrapper");
+              const otpForm = document.getElementById("otpForm");
+              const otpUserId = document.getElementById("otpUserId");
+              const finalOtp = document.getElementById("finalOtp");
+              const resendBtn = document.getElementById("resendBtn");
+              const resendText = document.getElementById("resendText");
+              const timerEl = document.getElementById("timer");
+              const otpBoxes = Array.from(document.querySelectorAll(".otp-box"));
+              const registerForms = document.querySelectorAll(".auth-form");
+              const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || "";
+
+              let otpTimerInterval = null;
+              let pendingOtpUserId = null;
 
               function showToast(message, type = "success") {
+                  if (!toastEl || !toast) return;
                   toastEl.classList.remove("bg-success", "bg-danger");
                   toastEl.classList.add(type === "success" ? "bg-success" : "bg-danger");
-                  toastEl.querySelector(".toast-body").innerText = message;
+                  const body = toastEl.querySelector(".toast-body");
+                  if (body) body.innerText = message;
                   toast.show();
               }
 
-              /* =========================================
-                 Spinner Control
-              ========================================== */
-
-              function toggleButton(btn, loading = true) {
+              function toggleButton(btn, loading) {
+                  if (!btn) return;
                   const text = btn.querySelector(".btn-text");
                   const spinner = btn.querySelector(".spinner-border");
-
-                  if (loading) {
-                      btn.disabled = true;
-                      text.classList.add("d-none");
-                      spinner.classList.remove("d-none");
-                  } else {
-                      btn.disabled = false;
-                      text.classList.remove("d-none");
-                      spinner.classList.add("d-none");
-                  }
+                  btn.disabled = loading;
+                  if (text) text.classList.toggle("d-none", loading);
+                  if (spinner) spinner.classList.toggle("d-none", !loading);
               }
 
-              /* =========================================
-                 Inline Error Display
-              ========================================== */
-
-              function clearErrors(form) {
-                  form.querySelectorAll(".error-message").forEach(el => el.innerText = "");
+              function clearErrors(scope = document) {
+                  scope.querySelectorAll(".error-message").forEach((el) => {
+                      el.innerText = "";
+                  });
               }
 
-              function showErrors(errors) {
-                  Object.keys(errors).forEach(field => {
-                      const errorEl = document.querySelector(`[data-error="${field}"]`);
-                      if (errorEl) {
-                          errorEl.innerText = errors[field][0];
+              function showErrors(errors = {}, scope = document) {
+                  Object.entries(errors).forEach(([field, messages]) => {
+                      const el = scope.querySelector(`[data-error="${field}"]`) ||
+                          document.querySelector(`[data-error="${field}"]`);
+                      if (el) {
+                          el.innerText = Array.isArray(messages) ? messages[0] : String(messages);
                       }
                   });
               }
 
-              /* =========================================
-                 Debounced Email Availability Check
-              ========================================== */
+              async function parseJson(response) {
+                  try {
+                      return await response.json();
+                  } catch (_) {
+                      return null;
+                  }
+              }
 
-              let debounceTimer;
+              async function apiRequest(url, options = {}) {
+                  const response = await fetch(url, {
+                      ...options,
+                      headers: {
+                          "X-CSRF-TOKEN": csrfToken,
+                          Accept: "application/json",
+                          ...(options.headers || {}),
+                      },
+                  });
 
+                  const data = await parseJson(response);
+                  return { response, data };
+              }
 
-              let emailInput = document.querySelector('[name="email"]');
-              let websiteInput = document.querySelector('[name="website"]');
-              let roleInput = document.querySelector('[name="role"]');
-
-              let timeout = null;
-
-
-
-              /* =========================================
-                       Website ↔ Email Validation
-                    ========================================== */
+              function normalizeEmail(email) {
+                  return String(email || "").trim().toLowerCase();
+              }
 
               function validateCompanyEmail(form) {
-                  const website = form.querySelector('[name="website"]')?.value;
-                  const email = form.querySelector('[name="email"]')?.value;
+                  const role = form.querySelector('[name="role"]')?.value;
+                  if (role !== "employer") return true;
+
+                  const website = form.querySelector('[name="website"]')?.value?.trim();
+                  const email = normalizeEmail(form.querySelector('[name="email"]')?.value);
 
                   if (!website || !email) return true;
 
                   try {
-                      let websiteDomain = new URL(website).hostname.replace("www.", "");
-                      let emailDomain = email.split("@")[1];
+                      const websiteDomain = new URL(website).hostname.replace(/^www\./, "").toLowerCase();
+                      const emailDomain = email.split("@")[1]?.toLowerCase();
 
-                      if (!websiteDomain.includes(emailDomain)) {
-                          form.querySelector('[data-error="email"]').innerText =
-                              "Email must match company website domain.";
+                      if (!emailDomain || !websiteDomain.includes(emailDomain)) {
+                          const emailErrorEl = form.querySelector('[data-error="email"]');
+                          if (emailErrorEl) {
+                              emailErrorEl.innerText = "Email must match company website domain.";
+                          }
                           return false;
                       }
 
                       return true;
-
-                  } catch (e) {
+                  } catch (_) {
+                      const websiteErrorEl = form.querySelector('[data-error="email"]');
+                      if (websiteErrorEl) {
+                          websiteErrorEl.innerText = "Please enter a valid website URL.";
+                      }
                       return false;
                   }
               }
 
-              /* =========================================
-                 Form Submission
-              ========================================== */
+              function startOtpTimer(seconds = 60) {
+                  if (!timerEl || !resendText || !resendBtn) return;
 
-              document.querySelectorAll(".auth-form").forEach(form => {
+                  if (otpTimerInterval) {
+                      clearInterval(otpTimerInterval);
+                  }
 
-                  form.addEventListener("submit", async function(e) {
+                  let remaining = seconds;
+                  timerEl.innerText = String(remaining);
+                  resendBtn.classList.add("d-none");
+                  resendText.classList.remove("d-none");
 
+                  otpTimerInterval = setInterval(() => {
+                      remaining -= 1;
+                      timerEl.innerText = String(Math.max(remaining, 0));
+
+                      if (remaining <= 0) {
+                          clearInterval(otpTimerInterval);
+                          otpTimerInterval = null;
+                          resendText.classList.add("d-none");
+                          resendBtn.classList.remove("d-none");
+                      }
+                  }, 1000);
+              }
+
+              function setOtpInputsDisabled(disabled) {
+                  otpBoxes.forEach((box) => {
+                      box.disabled = disabled;
+                  });
+              }
+
+              function collectOtp() {
+                  if (!finalOtp) return "";
+                  const otp = otpBoxes.map((box) => box.value).join("");
+                  finalOtp.value = otp;
+                  return otp;
+              }
+
+              function clearOtpInputs() {
+                  otpBoxes.forEach((box) => {
+                      box.value = "";
+                  });
+                  if (finalOtp) finalOtp.value = "";
+                  otpBoxes[0]?.focus();
+              }
+
+              function redirectByRole(role) {
+                  if (role === "candidate") {
+                      window.location.href = "/candidate/dashboard";
+                      return;
+                  }
+
+                  if (role === "employer") {
+                      window.location.href = "/employer/dashboard";
+                      return;
+                  }
+
+                  window.location.href = "{{ route('home') }}";
+              }
+
+              registerForms.forEach((form) => {
+                  form.addEventListener("submit", async (e) => {
                       e.preventDefault();
                       clearErrors(form);
 
                       if (!validateCompanyEmail(form)) return;
 
-                      const btn = form.querySelector(".submitBtn");
-                      toggleButton(btn, true);
+                      const submitBtn = form.querySelector(".submitBtn");
+                      toggleButton(submitBtn, true);
+
+                      const formData = new FormData(form);
+                      const email = normalizeEmail(formData.get("email"));
+                      formData.set("email", email);
 
                       try {
-
-                          const response = await fetch("/register", {
+                          const { response, data } = await apiRequest("{{ route('register') }}", {
                               method: "POST",
-                              headers: {
-                                  "X-CSRF-TOKEN": document
-                                      .querySelector('meta[name="csrf-token"]')
-                                      .content
-                              },
-                              body: new FormData(form)
+                              body: formData,
                           });
 
-                          const data = await response.json();
+                          if (response.ok && data?.status) {
+                              pendingOtpUserId = data.user_id;
+                              if (otpUserId) {
+                                  otpUserId.value = String(data.user_id || "");
+                              }
 
-                          if (!response.ok) {
-                              throw data;
+                              showToast(data.message || "OTP sent successfully.", "success");
+                              if (authCard) authCard.classList.add("d-none");
+                              if (otpWrapper) otpWrapper.classList.remove("d-none");
+
+                              clearOtpInputs();
+                              startOtpTimer(60);
+                              return;
                           }
 
-                          // SUCCESS
-                          showToast(data.message, "success");
-
-                          // Hide entire auth section
-                          document.querySelector(".auth-card").classList.add("d-none");
-
-                          // Show OTP Container
-                          document.getElementById("otpWrapper").classList.remove("d-none");
-
-                          // Set user id
-                          document.getElementById("otpUserId").value = data.user_id;
-
-                          // Start countdown
-                          startOtpTimer(60);
-                      } catch (err) {
-
-                          toggleButton(btn, false);
-
-                          if (err.errors) {
-                              showErrors(err.errors);
-                              showToast("Please fix the highlighted errors.", "danger");
-                          } else {
-                              showToast("Server error. Try again.", "danger");
+                          if (response.status === 422) {
+                              showErrors(data?.errors || {}, form);
+                              showToast(data?.message || "Please fix the highlighted fields.", "danger");
+                              return;
                           }
+
+                          showToast(data?.message || "Unable to register right now. Please try again.", "danger");
+                      } catch (_) {
+                          showToast("Network error. Please check your connection and try again.", "danger");
+                      } finally {
+                          toggleButton(submitBtn, false);
+                      }
+                  });
+              });
+
+              if (otpForm) {
+                  otpForm.addEventListener("submit", async (e) => {
+                      e.preventDefault();
+                      clearErrors(otpForm);
+
+                      const submitBtn = otpForm.querySelector(".submitBtn");
+                      const otp = collectOtp();
+                      const userId = otpUserId?.value || pendingOtpUserId;
+
+                      if (!userId) {
+                          showToast("Registration session expired. Please register again.", "danger");
+                          return;
                       }
 
-                  });
+                      if (!/^\d{6}$/.test(otp)) {
+                          showErrors({ otp: ["Please enter a valid 6-digit OTP."] }, otpForm);
+                          return;
+                      }
 
-              });
-              /* =========================================
-                     OTP Verification
-                  ========================================== */
+                      toggleButton(submitBtn, true);
+                      setOtpInputsDisabled(true);
 
-              document.getElementById("otpForm").addEventListener("submit", function(e) {
+                      try {
+                          const body = new FormData();
+                          body.append("user_id", String(userId));
+                          body.append("otp", otp);
 
-                  e.preventDefault();
+                          const { response, data } = await apiRequest("/verify-otp", {
+                              method: "POST",
+                              body,
+                          });
 
-                  let formData = new FormData(this);
-
-                  fetch("/verify-otp", {
-                          method: "POST",
-                          headers: {
-                              "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content
-                          },
-                          body: formData
-                      })
-                      .then(res => res.json())
-                      .then(data => {
-
-                          if (data.status) {
-                              showToast("Email verified successfully 🎉", "success");
-                              //if you want to redirect after verification, you can do it here
-
-
-                              setTimeout(() => {
-
-                                  if (data.role === "candidate") {
-                                      window.location.href = "/candidate/dashboard";
-                                  } else {
-                                      window.location.href = "/employer/dashboard";
-                                  }
-
-
-                              }, 1500);
-                          } else {
-                              showToast(data.message, "danger");
+                          if (response.ok && data?.status) {
+                              showToast(data.message || "Email verified successfully.", "success");
+                              setTimeout(() => redirectByRole(data.role), 500);
+                              return;
                           }
 
-                      })
-                      .catch(() => {
-                          showToast("Invalid OTP", "danger");
-                      });
+                          if (response.status === 422) {
+                              showErrors(data?.errors || {}, otpForm);
+                              showToast(data?.message || "Invalid OTP.", "danger");
+                              return;
+                          }
 
-              });
-
-
-              //
-
-              // OTP Auto Move
-              const otpBoxes = document.querySelectorAll(".otp-box");
+                          showToast(data?.message || "Unable to verify OTP right now. Please try again.", "danger");
+                      } catch (_) {
+                          showToast("Network error. Please check your connection and try again.", "danger");
+                      } finally {
+                          toggleButton(submitBtn, false);
+                          setOtpInputsDisabled(false);
+                      }
+                  });
+              }
 
               otpBoxes.forEach((box, index) => {
-
                   box.addEventListener("input", () => {
+                      box.value = box.value.replace(/\D/g, "").slice(0, 1);
 
-                      if (box.value.length === 1 && index < otpBoxes.length - 1) {
+                      if (box.value && index < otpBoxes.length - 1) {
                           otpBoxes[index + 1].focus();
                       }
 
@@ -668,68 +737,58 @@
                   });
 
                   box.addEventListener("keydown", (e) => {
-
                       if (e.key === "Backspace" && !box.value && index > 0) {
                           otpBoxes[index - 1].focus();
                       }
                   });
+
+                  box.addEventListener("paste", (e) => {
+                      e.preventDefault();
+                      const pasted = (e.clipboardData?.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+                      if (!pasted) return;
+
+                      pasted.split("").forEach((char, i) => {
+                          if (otpBoxes[i]) otpBoxes[i].value = char;
+                      });
+
+                      collectOtp();
+
+                      const nextIndex = Math.min(pasted.length, otpBoxes.length - 1);
+                      otpBoxes[nextIndex]?.focus();
+                  });
               });
 
-              // Collect OTP into hidden input
-              function collectOtp() {
-                  let otp = "";
-                  otpBoxes.forEach(box => otp += box.value);
-                  document.getElementById("finalOtp").value = otp;
-
-                  if (otp.length === 6) {
-                      document.getElementById("otpForm").dispatchEvent(new Event("submit"));
+              resendBtn?.addEventListener("click", async () => {
+                  const userId = otpUserId?.value || pendingOtpUserId;
+                  if (!userId) {
+                      showToast("Registration session expired. Please register again.", "danger");
+                      return;
                   }
-              }
-              //
 
+                  resendBtn.disabled = true;
 
-              function startOtpTimer(seconds) {
+                  try {
+                      const { response, data } = await apiRequest("/resend-otp", {
+                          method: "POST",
+                          headers: {
+                              "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({ user_id: userId }),
+                      });
 
-                  let timer = seconds;
-                  const timerEl = document.getElementById("timer");
-                  const resendText = document.getElementById("resendText");
-                  const resendBtn = document.getElementById("resendBtn");
-
-                  resendBtn.classList.add("d-none");
-                  resendText.classList.remove("d-none");
-
-                  const interval = setInterval(() => {
-
-                      timer--;
-                      timerEl.innerText = timer;
-
-                      if (timer <= 0) {
-                          clearInterval(interval);
-                          resendText.classList.add("d-none");
-                          resendBtn.classList.remove("d-none");
+                      if (response.ok && data?.status) {
+                          showToast(data.message || "OTP resent successfully.", "success");
+                          clearOtpInputs();
+                          startOtpTimer(60);
+                          return;
                       }
 
-                  }, 1000);
-              }
-
-              document.getElementById("resendBtn").addEventListener("click", async function() {
-
-                  const userId = document.getElementById("otpUserId").value;
-
-                  await fetch("/resend-otp", {
-                      method: "POST",
-                      headers: {
-                          "Content-Type": "application/json",
-                          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')
-                              .content
-                      },
-                      body: JSON.stringify({
-                          user_id: userId
-                      })
-                  });
-
-                  showToast("OTP resent successfully", "success");
-                  startOtpTimer(60);
+                      showToast(data?.message || "Unable to resend OTP right now.", "danger");
+                  } catch (_) {
+                      showToast("Network error. Please check your connection and try again.", "danger");
+                  } finally {
+                      resendBtn.disabled = false;
+                  }
               });
           });
       </script>

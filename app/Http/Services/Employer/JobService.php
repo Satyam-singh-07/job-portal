@@ -3,9 +3,12 @@
 namespace App\Http\Services\Employer;
 
 use App\Models\Job;
+use App\Models\JobApplication;
+use App\Models\JobView;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class JobService
 {
@@ -27,6 +30,13 @@ class JobService
 
                 // Set default status if not provided
                 $data['status'] = $data['status'] ?? 'Published';
+                $shouldConsumePostingCredit = $data['status'] === 'Published';
+
+                if ($shouldConsumePostingCredit) {
+                    $this->consumeEmployerPostingCredit((int) $user->id);
+                }
+
+                $data['posting_credit_consumed'] = $shouldConsumePostingCredit;
 
                 return $user->jobs()->create($data);
             });
@@ -56,6 +66,12 @@ class JobService
                 $data['visa_sponsorship'] = isset($data['visa_sponsorship']) ? (bool) $data['visa_sponsorship'] : false;
                 $data['allow_quick_apply'] = isset($data['allow_quick_apply']) ? (bool) $data['allow_quick_apply'] : false;
 
+                $publishingFirstTime = ($data['status'] ?? $job->status) === 'Published' && ! (bool) $job->posting_credit_consumed;
+                if ($publishingFirstTime) {
+                    $this->consumeEmployerPostingCredit((int) $job->user_id);
+                    $data['posting_credit_consumed'] = true;
+                }
+
                 $job->update($data);
                 return $job;
             });
@@ -79,6 +95,10 @@ class JobService
     public function getEmployerJobs(User $user, int $perPage = 10)
     {
         return $user->jobs()
+            ->withCount([
+                'applications',
+                'jobViews as views_count',
+            ])
             ->latest()
             ->paginate($perPage);
     }
@@ -100,13 +120,27 @@ class JobService
             ')
             ->first();
 
+        $totalApplications = JobApplication::whereHas('job', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->count();
+
+        $pendingReviews = JobApplication::where('status', 'Pending')
+            ->whereHas('job', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })->count();
+
+        $totalViews = JobView::whereHas('job', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->count();
+
         return [
             'total' => $stats->total ?? 0,
             'active' => $stats->active ?? 0,
             'draft' => $stats->draft ?? 0,
             'closed' => $stats->closed ?? 0,
-            'total_applications' => 0, // Placeholder for when applications table exists
-            'pending_reviews' => 0,    // Placeholder
+            'total_applications' => $totalApplications,
+            'pending_reviews' => $pendingReviews,
+            'total_views' => $totalViews,
         ];
     }
 
@@ -119,7 +153,16 @@ class JobService
      */
     public function updateStatus(Job $job, string $status): bool
     {
-        return $job->update(['status' => $status]);
+        return DB::transaction(function () use ($job, $status): bool {
+            if ($status === 'Published' && ! (bool) $job->posting_credit_consumed) {
+                $this->consumeEmployerPostingCredit((int) $job->user_id);
+            }
+
+            return $job->update([
+                'status' => $status,
+                'posting_credit_consumed' => (bool) $job->posting_credit_consumed || $status === 'Published',
+            ]);
+        });
     }
 
     /**
@@ -131,5 +174,19 @@ class JobService
     public function deleteJob(Job $job): bool
     {
         return $job->delete();
+    }
+
+    protected function consumeEmployerPostingCredit(int $userId): void
+    {
+        $affected = User::query()
+            ->whereKey($userId)
+            ->where('job_posting_balance', '>', 0)
+            ->decrement('job_posting_balance');
+
+        if ($affected === 0) {
+            throw ValidationException::withMessages([
+                'balance' => ['No job posting balance left. Ask admin to add more posting credits.'],
+            ]);
+        }
     }
 }

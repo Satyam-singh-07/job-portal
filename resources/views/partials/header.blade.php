@@ -39,7 +39,7 @@
                     </li>
 
                     <!-- Employer -->
-                    <li class="nav-item dropdown">
+                    {{-- <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {{ request()->routeIs('employers.*') || request()->routeIs('employer.*') ? 'active' : '' }}"
                             href="#" data-bs-toggle="dropdown">
                             Employer
@@ -52,7 +52,7 @@
                                     href="{{ route('employers.index') }}">
                                     Employer List
                                 </a>
-                            </li>
+                            </li> --}}
 
                             {{-- <li>
                                 <a class="dropdown-item {{ request()->routeIs('company.show') ? 'active' : '' }}"
@@ -61,7 +61,7 @@
                                 </a>
                             </li> --}}
 
-                            <li>
+                            {{-- <li>
                                 <a class="dropdown-item {{ request()->routeIs('employer.dashboard') ? 'active' : '' }}"
                                     href="{{ route('employer.dashboard') }}">
                                     Employer Dashboard
@@ -76,9 +76,9 @@
                             </li>
 
                         </ul>
-                    </li>
+                    </li> --}}
 
-                    <li class="nav-item dropdown">
+                    {{-- <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle {{ request()->routeIs('candidate.*') ? 'active' : '' }}"
                             href="#" id="candidateDropdown" role="button" data-bs-toggle="dropdown"
                             aria-expanded="false">
@@ -200,7 +200,7 @@
                             </li>
 
                         </ul>
-                    </li>
+                    </li> --}}
 
                     <!-- Contact -->
                     <li class="nav-item">
@@ -213,7 +213,14 @@
 
                 <!-- Right Side -->
                 <div class="navbar-actions d-flex align-items-center gap-2">
-
+                     
+                   {{-- @if (
+                    !auth()->user()->isCandidate()
+                    ) --}}
+                    <a href="{{ route('login') }}" class="btn btn-primary register-btn">
+                            Free Job Post
+                        </a>
+{{-- @endif  --}}
                     @guest
                         <a href="{{ route('login') }}" class="btn btn-outline-primary signin-btn">
                             Sign in
@@ -225,6 +232,63 @@
                     @endguest
 
                     @auth
+                        @php
+                            $authUser = auth()->user();
+                            $isCandidateUser = $authUser->isCandidate();
+                            $unreadNotificationCount = $isCandidateUser ? $authUser->unreadNotifications()->count() : 0;
+                            $latestNotifications = $isCandidateUser ? $authUser->notifications()->latest()->limit(5)->get() : collect();
+                        @endphp
+
+                        @if($isCandidateUser)
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary position-relative" type="button"
+                                    data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+                                    <i class="fa-regular fa-bell"></i>
+                                    @if($unreadNotificationCount > 0)
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                            {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
+                                            <span class="visually-hidden">unread notifications</span>
+                                        </span>
+                                    @endif
+                                </button>
+
+                                <ul class="dropdown-menu dropdown-menu-end notification-menu">
+                                    <li class="px-3 py-2 d-flex justify-content-between align-items-center">
+                                        <strong>Notifications</strong>
+                                        @if($unreadNotificationCount > 0)
+                                            <form method="POST" action="{{ route('candidate.notifications.read-all') }}">
+                                                @csrf
+                                                <button type="submit" class="btn btn-link p-0 text-decoration-none small">
+                                                    Mark all read
+                                                </button>
+                                            </form>
+                                        @endif
+                                    </li>
+
+                                    <li><hr class="dropdown-divider"></li>
+
+                                    @forelse($latestNotifications as $notification)
+                                        @php
+                                            $notificationData = $notification->data ?? [];
+                                            $notificationMessage = $notificationData['message'] ?? 'You have a new notification.';
+                                        @endphp
+                                        <li>
+                                            <a class="dropdown-item {{ is_null($notification->read_at) ? 'fw-semibold' : '' }}"
+                                                href="{{ route('candidate.notifications.read', ['notification' => $notification->id]) }}">
+                                                {{ \Illuminate\Support\Str::limit($notificationMessage, 70) }}
+                                            </a>
+                                        </li>
+                                    @empty
+                                        <li>
+                                            <span class="dropdown-item-text text-muted small">
+                                                No notifications yet.
+                                            </span>
+                                        </li>
+                                    @endforelse
+                                </ul>
+                            </div>
+                        @endif
+
                         <div class="dropdown user-dropdown">
                             <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                                 <img src="{{ asset('images/candidates/01.jpg') }}" alt="Profile" width="35">
@@ -232,7 +296,7 @@
 
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="{{ auth()->user()->role === 'candidate' ? route('candidate.dashboard') : route('employer.dashboard') }}">
+                                    <a class="dropdown-item" href="{{ $isCandidateUser ? route('candidate.dashboard') : route('employer.dashboard') }}">
                                         Dashboard
                                     </a>
                                 </li>

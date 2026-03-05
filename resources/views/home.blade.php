@@ -1,6 +1,58 @@
 @extends('layouts.app')
 
-@section('title', 'Online Job Portal')
+@php
+    $siteName = config('app.name', 'Job Portal');
+    $homeTitle = 'Find Jobs, Companies, and Career Opportunities';
+    $homeDescription = 'Discover verified jobs, explore top hiring companies, and apply quickly with '.$siteName.'.';
+@endphp
+
+@section('title', $homeTitle.' | '.$siteName)
+@section('meta_description', $homeDescription)
+@section('canonical_url', route('home'))
+@section('og_title', $homeTitle.' | '.$siteName)
+@section('og_description', $homeDescription)
+@section('og_url', route('home'))
+
+@push('structured_data')
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'WebSite',
+    'name' => $siteName,
+    'url' => route('home'),
+    'potentialAction' => [
+        '@type' => 'SearchAction',
+        'target' => route('jobs.index').'?search={search_term_string}',
+        'query-input' => 'required name=search_term_string',
+    ],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'Organization',
+    'name' => $siteName,
+    'url' => route('home'),
+    'logo' => asset('images/jobs-portal-logo.png'),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+<script type="application/ld+json">
+{!! json_encode([
+    '@context' => 'https://schema.org',
+    '@type' => 'ItemList',
+    'name' => 'Featured Jobs on Homepage',
+    'numberOfItems' => $featuredJobs->count(),
+    'itemListElement' => $featuredJobs->values()->map(function ($job, $index) {
+        return [
+            '@type' => 'ListItem',
+            'position' => $index + 1,
+            'url' => route('jobs.show', ['slug' => $job->slug]),
+            'name' => $job->title,
+        ];
+    })->all(),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}
+</script>
+@endpush
 
 @section('content')
 
@@ -15,24 +67,38 @@
                     </h1>
                     <p class="hero-copy">
                         Explore opportunities that match your skills and passions,
-                        and land the job you've always wanted with JobsPortal.
+                        and land the job you've always wanted with {{ $siteName }}.
+                    </p>
+                    <p class="hero-copy mb-4">
+                        <strong>{{ number_format($stats['jobs']) }}</strong> live jobs,
+                        <strong>{{ number_format($stats['companies']) }}</strong> active companies,
+                        and <strong>{{ number_format($stats['locations']) }}</strong> locations.
                     </p>
 
-                    <form class="hero-search" action="#" method="get">
+                    <form class="hero-search" action="{{ route('jobs.index') }}" method="get">
                         <div class="hero-search-fields">
                             <label class="hero-field">
                                 <i class="fa fa-search"></i>
-                                <input type="text" class="form-control" placeholder="Enter skills or job title">
+                                <input type="text" name="search" class="form-control" placeholder="Enter skills or job title">
                             </label>
 
                             <label class="hero-field select-field">
                                 <i class="fa fa-map-marker"></i>
-                                <select class="form-select">
-                                    <option selected>Select Category</option>
-                                    <option>Marketing</option>
-                                    <option>Teaching & Education</option>
-                                    <option>Design</option>
-                                    <option>Development</option>
+                                <select class="form-select" name="location">
+                                    <option value="" selected>All Locations</option>
+                                    @foreach($heroLocations as $location)
+                                        <option value="{{ $location }}">{{ $location }}</option>
+                                    @endforeach
+                                </select>
+                            </label>
+
+                            <label class="hero-field select-field">
+                                <i class="fa fa-briefcase"></i>
+                                <select class="form-select" name="category">
+                                    <option value="" selected>All Categories</option>
+                                    @foreach($heroCategories as $category)
+                                        <option value="{{ $category }}">{{ $category }}</option>
+                                    @endforeach
                                 </select>
                             </label>
 
@@ -60,7 +126,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <a href="#" class="userloginbox">
+                    <a href="{{ route('jobs.index') }}" class="userloginbox">
                         <h3>Search your desired Job</h3>
                         <p>Discover a career you are passionate about</p>
                         <img src="{{ asset('images/icons/search-job-icon.png') }}" alt="">
@@ -68,7 +134,7 @@
                 </div>
 
                 <div class="col-md-6">
-                    <a href="#" class="userloginbox postjobbox">
+                    <a href="{{ route('register') }}" class="userloginbox postjobbox">
                         <h3>Post a Job Today</h3>
                         <p>Discover the ideal candidate for your team</p>
                         <img src="{{ asset('images/icons/postjob.png') }}" alt="">
@@ -86,129 +152,31 @@
                 <h3>Top Companies are Hiring</h3>
             </div>
             <div class="row g-4 company-grid">
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo1.jpg" alt="Multimedia Design" />
-                        </div>
-                        <h5>Multimedia Design</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 5 Open Jobs
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo2.jpg" alt="Power Wave" />
-                        </div>
-                        <h5>Power Wave</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 2 Open Jobs
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo3.jpg" alt="Travel Advisor" />
-                        </div>
-                        <h5>Travel Advisor</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 0 Open Jobs
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo4.jpg" alt="New Design Studio" />
-                        </div>
-                        <h5>New Design Studio</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 1 Open Job
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo5.jpg" alt="Net Design" />
-                        </div>
-                        <h5>Net Design</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 1 Open Job
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo6.jpg" alt="Power Color" />
-                        </div>
-                        <h5>Power Color</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 2 Open Jobs
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo7.jpg" alt="Connect People" />
-                        </div>
-                        <h5>Connect People</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 2 Open Jobs
-                        </div>
-                    </a>
-                </div>
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <a href="company-detail.html" class="company-card">
-                        <div class="company-logo">
-                            <img src="images/employers/emplogo8.jpg" alt="Surf Wave" />
-                        </div>
-                        <h5>Surf Wave</h5>
-                        <div class="company-meta">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> United
-                            States of America
-                        </div>
-                        <div class="company-openings">
-                            <i class="fa fa-briefcase" aria-hidden="true"></i> 1 Open Job
-                        </div>
-                    </a>
-                </div>
+                @forelse($topCompanies as $company)
+                    <div class="col-12 col-sm-6 col-lg-3">
+                        <a href="{{ route('company.show', ['username' => ltrim((string) $company->username, '@')]) }}" class="company-card">
+                            <div class="company-logo">
+                                <img src="{{ $company->logo_url }}" alt="{{ $company->company_name ?: 'Company' }}" />
+                            </div>
+                            <h5>{{ $company->company_name ?: 'Company' }}</h5>
+                            <div class="company-meta">
+                                <i class="fa fa-industry" aria-hidden="true"></i>
+                                {{ $company->industry ?: 'Hiring in multiple industries' }}
+                            </div>
+                            <div class="company-openings">
+                                <i class="fa fa-briefcase" aria-hidden="true"></i>
+                                {{ $company->open_jobs_count }} Open {{ $company->open_jobs_count === 1 ? 'Job' : 'Jobs' }}
+                            </div>
+                        </a>
+                    </div>
+                @empty
+                    <div class="col-12">
+                        <p class="text-center text-muted mb-0">No companies with active openings yet.</p>
+                    </div>
+                @endforelse
             </div>
             <div class="company-viewall text-center">
-                <a href="company-detail.html" class="btn btn-primary">View All Featured Companies</a>
+                <a href="{{ route('employers.index') }}" class="btn btn-primary">View All Featured Companies</a>
             </div>
         </div>
     </section>
@@ -401,188 +369,41 @@
 
             <!--Featured Job start-->
             <div class="row g-4 featured-jobs">
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Full Time/Permanent
-                        </div>
-                        <h4 class="job-card-title">
-                            <a href="#.">Full Stack Designer</a>
-                        </h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> Barrington
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 07, 2025</span>
-                                <span class="job-card-company">Connect People</span>
+                @forelse($featuredJobs as $job)
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="job-card">
+                            <div class="job-card-status">
+                                <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
+                                {{ $job->employment_type }}
                             </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo7.jpg" alt="Connect People" />
+                            <h4 class="job-card-title">
+                                <a href="{{ route('jobs.show', ['slug' => $job->slug]) }}">{{ $job->title }}</a>
+                            </h4>
+                            <div class="job-card-location">
+                                <i class="fa fa-map-marker" aria-hidden="true"></i> {{ $job->location }}
                             </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Part Time
-                        </div>
-                        <h4 class="job-card-title">
-                            <a href="#.">Marketing Specialist</a>
-                        </h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> New York
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 10, 2025</span>
-                                <span class="job-card-company">Power Wave</span>
-                            </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo2.jpg" alt="Power Wave" />
+                            <div class="job-card-footer">
+                                <div class="job-card-meta">
+                                    <span class="job-card-date">{{ $job->created_at->format('M d, Y') }}</span>
+                                    <span class="job-card-company">{{ $job->user?->company_name ?: 'Company' }}</span>
+                                </div>
+                                <div class="job-card-logo">
+                                    <img src="{{ $job->user?->logo_url }}" alt="{{ $job->user?->company_name ?: 'Company' }}" />
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Freelance
-                        </div>
-                        <h4 class="job-card-title"><a href="#.">UI Engineer</a></h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> Los Angeles
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 12, 2025</span>
-                                <span class="job-card-company">Design Studio</span>
-                            </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo4.jpg" alt="Design Studio" />
-                            </div>
-                        </div>
+                @empty
+                    <div class="col-12">
+                        <p class="text-center text-muted mb-0">No featured jobs available yet.</p>
                     </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Contract
-                        </div>
-                        <h4 class="job-card-title"><a href="#.">Data Analyst</a></h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> Chicago
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 15, 2025</span>
-                                <span class="job-card-company">Sphere Tech</span>
-                            </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo9.jpg" alt="Sphere Tech" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Internship
-                        </div>
-                        <h4 class="job-card-title">
-                            <a href="#.">Junior QA Engineer</a>
-                        </h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> Austin
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 18, 2025</span>
-                                <span class="job-card-company">Media Wave</span>
-                            </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo10.jpg" alt="Media Wave" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Remote
-                        </div>
-                        <h4 class="job-card-title"><a href="#.">Product Manager</a></h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> Remote
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 20, 2025</span>
-                                <span class="job-card-company">Power Color</span>
-                            </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo6.jpg" alt="Power Color" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Hybrid
-                        </div>
-                        <h4 class="job-card-title"><a href="#.">DevOps Engineer</a></h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> Seattle
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 22, 2025</span>
-                                <span class="job-card-company">Surf Wave</span>
-                            </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo8.jpg" alt="Surf Wave" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="job-card">
-                        <div class="job-card-status">
-                            <span class="job-card-status-icon"><i class="fa fa-briefcase" aria-hidden="true"></i></span>
-                            Full Time
-                        </div>
-                        <h4 class="job-card-title">
-                            <a href="#.">Mobile App Developer</a>
-                        </h4>
-                        <div class="job-card-location">
-                            <i class="fa fa-map-marker" aria-hidden="true"></i> Miami
-                        </div>
-                        <div class="job-card-footer">
-                            <div class="job-card-meta">
-                                <span class="job-card-date">Mar 24, 2025</span>
-                                <span class="job-card-company">Power Wave</span>
-                            </div>
-                            <div class="job-card-logo">
-                                <img src="images/employers/emplogo2.jpg" alt="Power Wave" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                @endforelse
             </div>
             <!--Featured Job end-->
 
             <!--button start-->
             <div class="category-viewall text-center">
-                <a href="job-listing.html" class="btn btn-primary">View All Featured Jobs</a>
+                <a href="{{ route('jobs.index') }}" class="btn btn-primary">View All Featured Jobs</a>
             </div>
             <!--button end-->
         </div>

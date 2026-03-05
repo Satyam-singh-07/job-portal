@@ -1,118 +1,67 @@
- @extends('layouts.app')
+@extends('layouts.app')
 
-@section('title', 'Job Alerts')
+@section('title', 'My Followings')
 
 @section('content')
-
- <section class="dashboard-section">
-      <div class="container">
+<section class="dashboard-section">
+    <div class="container">
         <div class="dashboard-layout">
-                
-                    @include('candidates.partials.sidebar')
-          <div class="dashboard-main">
-            <div class="dashboard-page-header">
-              <div>
-                <h1>Following</h1>
-                <p>
-                  Keep tabs on companies you admire and get nudged when they
-                  post new roles.
-                </p>
-              </div>
-              <div class="d-flex flex-wrap gap-2">
-                <a href="#." class="btn btn-outline-primary"
-                  ><i class="fa-solid fa-bell" aria-hidden="true"></i> Notify
-                  me</a
-                >
-                <a href="job-listing.html" class="btn btn-primary"
-                  ><i
-                    class="fa-solid fa-magnifying-glass"
-                    aria-hidden="true"
-                  ></i>
-                  Discover companies</a
-                >
-              </div>
-            </div>
+            @include('candidates.partials.sidebar')
 
-            <div class="row g-3">
-              <div class="col-md-6 col-xl-4">
-                <div class="following-card h-100">
-                  <h4>Skyline Digital</h4>
-                  <p>
-                    Product &amp; Engineering · San Francisco · Remote friendly
-                  </p>
-                  <span>3 Open Jobs</span>
+            <div class="dashboard-main">
+                <div class="dashboard-page-header">
+                    <div>
+                        <h1>My Followings</h1>
+                        <p>Track employers you follow and discover their latest open roles.</p>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ route('jobs.index') }}" class="btn btn-primary">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Discover Companies
+                        </a>
+                    </div>
                 </div>
-              </div>
-              <div class="col-md-6 col-xl-4">
-                <div class="following-card h-100">
-                  <h4>Northwind Commerce</h4>
-                  <p>Ecommerce Platform · Toronto · Hybrid</p>
-                  <span>5 Open Jobs</span>
-                </div>
-              </div>
-              <div class="col-md-6 col-xl-4">
-                <div class="following-card h-100">
-                  <h4>Atlas Health</h4>
-                  <p>Healthcare Technology · New York · Hybrid</p>
-                  <span>2 Open Jobs</span>
-                </div>
-              </div>
-              <div class="col-md-6 col-xl-4">
-                <div class="following-card h-100">
-                  <h4>Mova Robotics</h4>
-                  <p>Robotics &amp; AI · Berlin · Flexible</p>
-                  <span>4 Open Jobs</span>
-                </div>
-              </div>
-              <div class="col-md-6 col-xl-4">
-                <div class="following-card h-100">
-                  <h4>NovaCloud</h4>
-                  <p>Cloud Infrastructure · Austin · Remote friendly</p>
-                  <span>6 Open Jobs</span>
-                </div>
-              </div>
-              <div class="col-md-6 col-xl-4">
-                <div class="following-card h-100">
-                  <h4>Bright Labs</h4>
-                  <p>Fintech Platform · Berlin · Remote EU</p>
-                  <span>3 Open Jobs</span>
-                </div>
-              </div>
-            </div>
 
-            <div class="list-card mt-4">
-              <h3>Smart Suggestions</h3>
-              <ul>
-                <li>
-                  <div>
-                    <strong>Companies hiring for Lead Product roles</strong>
-                    <p class="mb-0 text-muted">
-                      Based on your saved jobs and search history.
-                    </p>
-                  </div>
-                  <a href="#." class="btn btn-outline-primary btn-sm rounded-3"
-                    >Follow all</a
-                  >
-                </li>
-                <li>
-                  <div>
-                    <strong>Studios expanding remote design teams</strong>
-                    <p class="mb-0 text-muted">
-                      14 companies align with your preferences.
-                    </p>
-                  </div>
-                  <a
-                    href="#."
-                    class="btn btn-outline-secondary btn-sm rounded-3"
-                    >Review</a
-                  >
-                </li>
-              </ul>
+                <div class="row g-3">
+                    @forelse($followings as $employer)
+                        <div class="col-md-6 col-xl-4">
+                            <div class="following-card h-100">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <img src="{{ $employer->logo_url }}" alt="{{ $employer->company_name ?: 'Company' }}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;">
+                                    <h4 class="mb-0">{{ $employer->company_name ?: 'Company' }}</h4>
+                                </div>
+                                <p class="mb-2">{{ $employer->industry ?: 'Hiring in multiple industries' }}</p>
+                                <span>{{ $employer->open_jobs_count ?? 0 }} Open {{ ($employer->open_jobs_count ?? 0) === 1 ? 'Job' : 'Jobs' }}</span>
+
+                                <div class="mt-3 d-flex gap-2">
+                                    <a href="{{ route('company.show', ['username' => ltrim((string) $employer->username, '@')]) }}" class="btn btn-outline-primary btn-sm">
+                                        View Company
+                                    </a>
+                                    <form action="{{ route('candidate.followings.destroy', $employer->id) }}" method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-outline-danger btn-sm">Unfollow</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-12">
+                            <div class="list-card">
+                                <h3>No followings yet</h3>
+                                <p class="text-muted mb-3">Follow employers to get updates when they post new jobs.</p>
+                                <a href="{{ route('jobs.index') }}" class="btn btn-primary">Explore Jobs</a>
+                            </div>
+                        </div>
+                    @endforelse
+                </div>
+
+                @if($followings->hasPages())
+                    <div class="pagination-wrapper mt-4">
+                        {{ $followings->links() }}
+                    </div>
+                @endif
             </div>
-          </div>
         </div>
-      </div>
-    </section>
-
-
+    </div>
+</section>
 @endsection
