@@ -1,0 +1,56 @@
+name: Deploy Laravel to AWS EC2
+
+on:
+  push:
+    branches:
+      - main # Triggers the deployment when code is pushed to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Execute Deployment Scripts via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USERNAME }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Navigate to your Laravel project directory (Update this path)
+            cd /var/www/your-laravel-app
+
+            # 2. Put application into maintenance mode to prevent errors for users
+            php artisan down || true
+
+            # 3. Pull the latest code from GitHub
+            git pull origin main
+
+            # 4. Install PHP dependencies (excluding dev dependencies)
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+            # 5. Run database migrations safely
+            php artisan migrate --force
+
+            # 6. Clear all caches and rebuild them for optimal performance
+            php artisan optimize:clear
+            php artisan config:cache
+            php artisan event:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            # 7. Set correct permissions for the storage and cache directories
+            # Note: Your SSH user must have sudo privileges to run chown without a password
+            sudo chown -R www-data:www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
+
+            # 8. Compile Frontend Assets (Uncomment the lines below if you are using Node/Vite)
+            # npm install
+            # npm run build
+
+            # 9. Bring application out of maintenance mode
+            php artisan up
